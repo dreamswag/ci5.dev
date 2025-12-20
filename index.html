@@ -2,55 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ci5.dev [REGISTRY]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ci5.dev [CORK]</title>
     <link rel="stylesheet" href="https://ci5.run/static/style.css">
     <style>
-        /* Overrides to make it a static page instead of a window */
-        body { 
-            height: auto; overflow-y: auto; display: block; padding-top: 60px; 
-            max-width: 900px; margin: 0 auto;
+        /* TUI Overrides for Static Content */
+        body { overflow-y: auto; height: auto; display: block; padding-top: 50px; }
+        .tui-container { 
+            max-width: 1000px; margin: 0 auto; padding-bottom: 60px;
+            background: rgba(10, 10, 10, 0.95); 
+            border: 1px solid #222; border-radius: 6px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
         }
-        .static-terminal {
-            background-color: rgba(10, 10, 10, 0.95);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            min-height: 80vh;
+        .tui-header { 
+            padding: 15px 20px; border-bottom: 1px solid #222; 
+            background: linear-gradient(to bottom, #1a1a1a 0%, #050505 100%);
+            display: flex; justify-content: space-between; align-items: center;
         }
+        .tui-body { padding: 20px; color: #d3d7cf; font-family: 'Piboto', monospace; }
+        
         .section-header { 
-            border-bottom: 1px dashed var(--dim); 
-            margin-top: 30px; margin-bottom: 15px; 
-            color: var(--purple); font-weight: bold;
+            color: #75507b; font-weight: bold; font-size: 1.2em; 
+            border-bottom: 1px dashed #333; margin: 30px 0 15px 0; padding-bottom: 5px;
         }
-        .entry { margin-bottom: 20px; padding-left: 10px; border-left: 2px solid var(--term); }
-        .entry:hover { border-left-color: var(--green); }
-        .entry-title { font-weight: bold; color: var(--text); }
-        .entry-desc { color: var(--dim); font-size: 0.9em; margin-top: 5px; }
-        .entry-cmd { font-family: monospace; background: #111; padding: 2px 6px; color: var(--green); font-size: 0.85em; cursor: pointer; }
+        .entry { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 10px; border-bottom: 1px solid #111; transition: background 0.1s;
+        }
+        .entry:hover { background: rgba(138, 226, 52, 0.05); }
+        .entry-name { color: #8ae234; font-weight: bold; width: 200px; }
+        .entry-desc { color: #888; flex: 1; font-size: 0.9em; }
+        .entry-ram { color: #555753; width: 80px; text-align: right; font-size: 0.85em; }
+        .entry-cmd { 
+            font-family: monospace; color: #00e5ff; cursor: pointer; 
+            border: 1px solid #333; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-left: 15px;
+        }
+        .entry-cmd:hover { background: #00e5ff; color: #000; }
+        
+        .nav-bar { text-align: center; margin-bottom: 20px; font-size: 0.9em; color: #555; }
+        .nav-bar a { color: #75507b; text-decoration: none; margin: 0 5px; }
+        .nav-bar a:hover { color: #fff; }
     </style>
 </head>
 <body>
 
-    <div class="nav-header">
+    <div class="nav-bar">
         📟 <a href="https://ci5.run">ci5.run</a>: curl ~ 
         📡 <a href="https://github.com/dreamswag/ci5">ci5.host</a>: core ~ 
         🧪 <a href="https://ci5.dev">ci5.dev</a>: cork ~ 
         🔬 <a href="https://ci5.network">ci5.network</a>: cert
     </div>
 
-    <div class="static-terminal">
-        <div style="text-align:center; margin-bottom:30px;">
-            <h1 style="font-size:1.5em; margin:0;">ci5.dev // CORK REGISTRY</h1>
-            <div class="dim">The Unmanaged Operating Environment [UOE]</div>
+    <div class="tui-container">
+        <div class="tui-header">
+            <span class="white">root@ci5.dev:~/registry#</span>
+            <span class="dim">UOE: ACTIVE</span>
         </div>
+        <div class="tui-body">
+            
+            <div style="text-align:center; margin-bottom:40px;">
+                <h1 style="margin:0; color:#fff; font-size:2.5em; letter-spacing:2px;">ci5.dev</h1>
+                <div class="purple" style="font-size:1.2em;">THE CORK REGISTRY</div>
+                <div class="dim" style="margin-top:10px; max-width:600px; margin-left:auto; margin-right:auto;">
+                    The Unmanaged Operating Environment.<br>
+                    Ephemeral containers inhabiting the 6GB Leeway of the Ci5 Architecture.<br>
+                    <i>Wipe the core. Keep the corks.</i>
+                </div>
+            </div>
 
-        <div id="registry-content">
-            <div class="dim">Connecting to Cork Database...</div>
-        </div>
+            <div id="registry-content">
+                <div class="dim">Connecting to Cork Database...</div>
+            </div>
 
-        <div style="margin-top:50px; text-align:center; font-size:0.8em;" class="dim">
-            147 741 // WIPE THE CORE // KEEP THE CORKS
+            <div class="dim" style="margin-top:50px; text-align:center; font-size:0.8em; border-top:1px solid #222; padding-top:20px;">
+                147 741 <span class="purple">//</span> WIPE THE CORE <span class="purple">//</span> KEEP THE CORKS
+            </div>
         </div>
     </div>
 
@@ -67,11 +94,10 @@
                 for(const [k,v] of Object.entries(items)) {
                     h += `
                     <div class="entry">
-                        <span class="entry-title">${k}</span> <span class="dim">[${v.ram || 'MEM?'}]</span>
-                        <div class="entry-desc">${v.desc}</div>
-                        <div style="margin-top:8px;">
-                            <span class="entry-cmd" onclick="copy('${k}')">cork install ${k}</span>
-                        </div>
+                        <span class="entry-name">${k}</span>
+                        <span class="entry-desc">${v.desc}</span>
+                        <span class="entry-ram">${v.ram || '-'}</span>
+                        <span class="entry-cmd" onclick="copy('${k}')">INSTALL</span>
                     </div>`;
                 }
                 return h;
@@ -84,7 +110,7 @@
             document.getElementById('registry-content').innerHTML = "<span class='red'>REGISTRY OFFLINE.</span>";
         }
     }
-    function copy(t) { navigator.clipboard.writeText(`cork install ${t}`); alert('Copied'); }
+    function copy(t) { navigator.clipboard.writeText(`cork install ${t}`); alert(`Command copied: cork install ${t}`); }
     load();
 </script>
 </body>
