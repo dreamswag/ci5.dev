@@ -34,7 +34,7 @@
 <body>
 <div class="container">
     <div class="nav-header">
-        📟 <a href="https://ci5.run">ci5.run</a>: curl ~ 📡 <a href="https://github.com/dreamswag/ci5">ci5.host</a>: core ~ 📦 <a href="https://ci5.dev">ci5.dev</a>: cork ~ 🔬 <a href="https://ci5.network">ci5.network</a>: cert
+        📟 <a href="https://ci5.run">ci5.run</a>: curl ~ 📡 <a href="https://github.com/dreamswag/ci5">ci5.host</a>: core ~ 🧪 <a href="https://ci5.dev">ci5.dev</a>: cork ~ 🔬 <a href="https://ci5.network">ci5.network</a>: cert
     </div>
     <div class="hero">
         <h1>ci5.dev</h1>
@@ -50,7 +50,7 @@
 <script>
     async function loadRegistry() {
         try {
-            const res = await fetch('corks.json'); // Local fetch
+            const res = await fetch('corks.json');
             const data = await res.json();
             renderGrid(data.official, 'official-grid', 'tag-off', 'OFFICIAL');
             renderGrid(data.community, 'community-grid', 'tag-com', 'COMMUNITY');

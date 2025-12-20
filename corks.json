@@ -1,34 +1,46 @@
 {
+  "meta": {
+    "version": "1.0",
+    "updated": "2025-12-20",
+    "message": "The Leeway Layer (UOE)."
+  },
   "official": {
     "adguard": {
       "repo": "dreamswag/cork-adguard",
-      "desc": "Network-wide ads & tracker blocking. (Core DNS)"
+      "desc": "Network-wide ads & tracker blocking. (Core DNS)",
+      "ram": "128MB"
     },
     "unbound": {
       "repo": "dreamswag/cork-unbound",
-      "desc": "Recursive caching DNS resolver. (Privacy)"
+      "desc": "Recursive caching DNS resolver. (Privacy)",
+      "ram": "64MB"
     },
     "ntopng": {
       "repo": "dreamswag/cork-ntopng",
-      "desc": "Traffic analysis and flow monitoring."
+      "desc": "Traffic analysis and flow monitoring.",
+      "ram": "256MB"
     }
   },
   "community": {
     "tor-relay": {
       "repo": "community/cork-tor-relay",
-      "desc": "Onion routing relay node (Snowflake/Bridge)."
+      "desc": "Onion routing relay node (Snowflake/Bridge).",
+      "ram": "512MB"
     },
     "minecraft-paper": {
       "repo": "community/cork-minecraft-paper",
-      "desc": "PaperMC Server. Requires 4GB+ RAM leeway."
+      "desc": "PaperMC Server. Uses the Pi 5 Leeway.",
+      "ram": "4GB+"
     },
     "home-assistant": {
       "repo": "community/cork-home-assistant",
-      "desc": "Open source home automation hub (IoT)."
+      "desc": "Open source home automation hub (IoT).",
+      "ram": "1GB"
     },
     "bitcoin-node": {
       "repo": "community/cork-bitcoin-node",
-      "desc": "Full validated Bitcoin L1 node. (High Storage)."
+      "desc": "Full validated Bitcoin L1 node. (High Storage).",
+      "ram": "2GB"
     }
   }
 }
