@@ -2,7 +2,7 @@
 
 # 🧬⚗️ **[ci5.dev](ci5.dev): [cork]munity** 👨‍🔬🧪
 
-## 🥼 **Unmanaged Openwrt Operating Environment (UOOE)** 🥽
+## 🥼 **Unmanaged Operating Environment (UOE)** 🥽
 
 Ci5 separates the network into two planes:
 1.  **LET (Logical Execution Time):** `core` **Operating System** 
