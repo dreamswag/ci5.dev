@@ -37,4 +37,3 @@ curl ci5.run/free | sh
 2. Ensure it handles its own persistence (volumes).
 3. Fork this repo.
 4. Add your entry to `corks.json`.
-5. PR.
