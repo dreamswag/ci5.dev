@@ -1,0 +1,34 @@
+{
+  "official": {
+    "adguard": {
+      "repo": "dreamswag/cork-adguard",
+      "desc": "Network-wide ads & tracker blocking. (Core DNS)"
+    },
+    "unbound": {
+      "repo": "dreamswag/cork-unbound",
+      "desc": "Recursive caching DNS resolver. (Privacy)"
+    },
+    "ntopng": {
+      "repo": "dreamswag/cork-ntopng",
+      "desc": "Traffic analysis and flow monitoring."
+    }
+  },
+  "community": {
+    "tor-relay": {
+      "repo": "community/cork-tor-relay",
+      "desc": "Onion routing relay node (Snowflake/Bridge)."
+    },
+    "minecraft-paper": {
+      "repo": "community/cork-minecraft-paper",
+      "desc": "PaperMC Server. Requires 4GB+ RAM leeway."
+    },
+    "home-assistant": {
+      "repo": "community/cork-home-assistant",
+      "desc": "Open source home automation hub (IoT)."
+    },
+    "bitcoin-node": {
+      "repo": "community/cork-bitcoin-node",
+      "desc": "Full validated Bitcoin L1 node. (High Storage)."
+    }
+  }
+}
