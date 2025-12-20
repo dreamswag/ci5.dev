@@ -1,6 +1,6 @@
 {
   "meta": {
-    "version": "1.0",
+    "version": "1.1",
     "updated": "2025-12-20",
     "message": "The Leeway Layer (UOE)."
   },
@@ -36,6 +36,16 @@
       "repo": "community/cork-home-assistant",
       "desc": "Open source home automation hub (IoT).",
       "ram": "1GB"
+    },
+    "monero-node": {
+      "repo": "community/cork-monero-node",
+      "desc": "Monero (XMR) Daemon. Maximum Privacy. CPU Intensive.",
+      "ram": "2GB"
+    },
+    "ethereum-node": {
+      "repo": "community/cork-ethereum-node",
+      "desc": "Ethereum Execution Client (Geth/Light). SSD Required.",
+      "ram": "4GB"
     },
     "bitcoin-node": {
       "repo": "community/cork-bitcoin-node",

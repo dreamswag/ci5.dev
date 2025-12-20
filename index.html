@@ -3,38 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title>ci5.dev [REGISTRY]</title>
-    <link rel="stylesheet" href="https://ci5.run/static/style.css"> 
+    <link rel="stylesheet" href="https://ci5.run/static/style.css">
     <style>
-        /* Overrides for the Registry List View */
-        .container { max-width: 900px; margin-top: 80px; width: 100%; padding-bottom: 50px; }
-        .tui-header { border-bottom: 1px dashed var(--dim); padding-bottom: 10px; margin-bottom: 20px; }
-        .tui-title { font-size: 1.5em; color: var(--purple); font-weight: bold; }
-        .tui-meta { color: var(--dim); font-size: 0.9em; margin-top: 5px; }
-        
-        .tui-section { margin-top: 40px; }
-        .tui-heading { color: var(--green); text-transform: uppercase; margin-bottom: 15px; font-weight: bold; }
-        
-        /* The List Items */
-        .entry { 
-            display: flex; flex-direction: column; 
-            border-left: 1px solid var(--border); 
-            padding-left: 15px; margin-bottom: 20px; 
-            transition: border-color 0.2s;
+        /* Overrides to make it a static page instead of a window */
+        body { 
+            height: auto; overflow-y: auto; display: block; padding-top: 60px; 
+            max-width: 900px; margin: 0 auto;
         }
-        .entry:hover { border-left-color: var(--purple); }
-        
-        .entry-top { display: flex; align-items: baseline; gap: 15px; }
-        .entry-name { color: var(--text); font-weight: bold; font-size: 1.1em; }
-        .entry-repo { color: var(--dim); font-size: 0.85em; }
-        .entry-desc { color: #aaa; margin-top: 5px; font-size: 0.95em; }
-        .entry-cmd { 
-            margin-top: 8px; font-size: 0.85em; 
-            color: var(--dim); font-family: monospace; 
-            cursor: pointer; display: inline-block;
+        .static-terminal {
+            background-color: rgba(10, 10, 10, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            min-height: 80vh;
         }
-        .entry-cmd:hover { color: var(--cyan); }
-
-        .ascii-art { font-size: 0.7em; color: var(--dim); white-space: pre; margin-bottom: 20px; }
+        .section-header { 
+            border-bottom: 1px dashed var(--dim); 
+            margin-top: 30px; margin-bottom: 15px; 
+            color: var(--purple); font-weight: bold;
+        }
+        .entry { margin-bottom: 20px; padding-left: 10px; border-left: 2px solid var(--term); }
+        .entry:hover { border-left-color: var(--green); }
+        .entry-title { font-weight: bold; color: var(--text); }
+        .entry-desc { color: var(--dim); font-size: 0.9em; margin-top: 5px; }
+        .entry-cmd { font-family: monospace; background: #111; padding: 2px 6px; color: var(--green); font-size: 0.85em; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -46,65 +39,52 @@
         🔬 <a href="https://ci5.network">ci5.network</a>: cert
     </div>
 
-    <div class="container">
-        <div class="tui-header">
-            <div class="tui-title">./REGISTRY</div>
-            <div class="tui-meta">
-                SOURCE: corks.json<br>
-                STATUS: <span class="green">ONLINE</span><br>
-                LEEWAY: 7GB AVAILABLE
-            </div>
+    <div class="static-terminal">
+        <div style="text-align:center; margin-bottom:30px;">
+            <h1 style="font-size:1.5em; margin:0;">ci5.dev // CORK REGISTRY</h1>
+            <div class="dim">The Unmanaged Operating Environment [UOE]</div>
         </div>
 
-        <div class="desc">
-            The Unmanaged Operating Environment (UOE).<br>
-            Community containers for the Ci5 Architecture.
+        <div id="registry-content">
+            <div class="dim">Connecting to Cork Database...</div>
         </div>
 
-        <div id="content-area">
-            <div class="dim">Loading manifest...</div>
-        </div>
-
-        <div class="footer">
-            147 741 <span class="dim">//</span> WIPE THE CORE <span class="dim">//</span> KEEP THE CORKS
+        <div style="margin-top:50px; text-align:center; font-size:0.8em;" class="dim">
+            147 741 // WIPE THE CORE // KEEP THE CORKS
         </div>
     </div>
 
 <script>
-    // Simple fetcher that renders in TUI style
     async function load() {
         try {
             const res = await fetch('corks.json');
             const db = await res.json();
-            const area = document.getElementById('content-area');
-            area.innerHTML = '';
+            const el = document.getElementById('registry-content');
+            el.innerHTML = '';
 
-            // Renderer
-            const renderSection = (title, items) => {
-                let html = `<div class="tui-section"><div class="tui-heading">${title}</div>`;
-                for (const [key, val] of Object.entries(items)) {
-                    html += `
-                        <div class="entry">
-                            <div class="entry-top">
-                                <span class="entry-name">${key}</span>
-                                <span class="entry-repo">[${val.ram || 'MEM?'}]</span>
-                            </div>
-                            <div class="entry-desc">${val.desc}</div>
-                            <div class="entry-cmd" onclick="copy('${key}')">$ cork install ${key}</div>
-                        </div>`;
+            const render = (title, items) => {
+                let h = `<div class="section-header">${title}</div>`;
+                for(const [k,v] of Object.entries(items)) {
+                    h += `
+                    <div class="entry">
+                        <span class="entry-title">${k}</span> <span class="dim">[${v.ram || 'MEM?'}]</span>
+                        <div class="entry-desc">${v.desc}</div>
+                        <div style="margin-top:8px;">
+                            <span class="entry-cmd" onclick="copy('${k}')">cork install ${k}</span>
+                        </div>
+                    </div>`;
                 }
-                html += `</div>`;
-                return html;
+                return h;
             };
 
-            area.innerHTML += renderSection('Official Modules', db.official);
-            area.innerHTML += renderSection('Community Modules', db.community);
+            el.innerHTML += render('OFFICIAL MODULES', db.official);
+            el.innerHTML += render('COMMUNITY MODULES', db.community);
 
-        } catch (e) {
-            document.getElementById('content-area').innerHTML = `<span class="red">Error: Registry Offline.</span>`;
+        } catch(e) {
+            document.getElementById('registry-content').innerHTML = "<span class='red'>REGISTRY OFFLINE.</span>";
         }
     }
-    function copy(txt) { navigator.clipboard.writeText(`cork install ${txt}`); alert('Copied to clipboard'); }
+    function copy(t) { navigator.clipboard.writeText(`cork install ${t}`); alert('Copied'); }
     load();
 </script>
 </body>
