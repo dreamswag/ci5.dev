@@ -2,17 +2,24 @@
 
 # 🧬⚗️ ci5.dev [CORK REGISTRY] 👨‍🔬🧪
 
-## **The Unmanaged Operating Environment (UOE).**
+## 🥼 **The Unmanaged Operating Environment (UOE)** 🥽
 
 Ci5 separates the network into two planes:
-1.  **LET (Logical Execution Time):** The `core` OS. Immutable, timing-critical, essential. (The Router).
-2.  **UOE (Unmanaged Operating Environment):** The `cork` layer. Mutable, chaotic, optional. (The Apps).
+1.  **LET (Logical Execution Time):** `core` **Operating System** 
 
-## The Leeway
-The Raspberry Pi 5 8GB provides ~7GB of "Leeway" RAM that is not required for routing. This repository contains the registry of "Corks" (Sandboxed Containers) designed to utilize this space without compromising the stability of the Core.
+             > Immutable, timing-critical, essential. (The Router)
+2.  **UOE (Unmanaged Operating Environment):** `cork` **Layer**
+
+             > Mutable, chaotic, optional. (The Apps)
+
+## 😶‍🌫️ The Leeway 😶‍🌫️
+**Raspberry Pi 5 8GB** provides **~7GB of "Leeway" RAM** that is not required for routing.  
+
+This repository contains the registry of "**Corks**" (**Sandboxed Containers**): 
+* designed to **utilise this space without compromising the stability of the Core**.
 
 ## 🔎 Instructions for Use 🔍
-**On your Device:**
+### **On your Device:**
 ```bash
 # Search for modules
 cork search <term>
@@ -24,7 +31,7 @@ cork install <name>
 curl ci5.run/free | sh
 ```
 
-## 🛸How to Submit
+## 🛸 How to Submit💨
 
 1. Create a repo containing a `docker-compose.yml`.
 2. Ensure it handles its own persistence (volumes).
