@@ -2,7 +2,7 @@
 
 # 🧬⚗️ **[ci5.dev](https://ci5.dev): [cork]munity** 👨‍🔬🧪
 
-## 🥼 **Unmanaged Operating Environment (UOE)** 🥽
+## 🥽 **Unmanaged Operating Environment (UOE)** 
 
 Ci5 separates the network into two planes:
 1.  **LET (Logical Execution Time):** `core` **Operating System**
@@ -12,13 +12,13 @@ Ci5 separates the network into two planes:
 
              > Mutable, chaotic, optional. (Apps)
 
-## 😶‍🌫️ Leeway 😶‍🌫️
+## 😶‍🌫️ Leeway 
 **Raspberry Pi 5 8GB** provides **~7GB of "Leeway" RAM** that is not required for routing.  
 
 This repository contains the registry of "**Corks**" (**Sandboxed Containers**): 
 * designed to **utilise this space without compromising the stability of the Core**.
 
-## 🔎 Instructions 🔍
+## 🔎 Instructions 
 ### **On your Device:**
 ```bash
 # Search for modules
