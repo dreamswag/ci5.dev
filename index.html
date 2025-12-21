@@ -2,116 +2,118 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ci5.dev [CORK]</title>
-    <link rel="stylesheet" href="https://ci5.run/static/style.css">
-    <style>
-        /* TUI Overrides for Static Content */
-        body { overflow-y: auto; height: auto; display: block; padding-top: 50px; }
-        .tui-container { 
-            max-width: 1000px; margin: 0 auto; padding-bottom: 60px;
-            background: rgba(10, 10, 10, 0.95); 
-            border: 1px solid #222; border-radius: 6px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-        }
-        .tui-header { 
-            padding: 15px 20px; border-bottom: 1px solid #222; 
-            background: linear-gradient(to bottom, #1a1a1a 0%, #050505 100%);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .tui-body { padding: 20px; color: #d3d7cf; font-family: 'Piboto', monospace; }
-        
-        .section-header { 
-            color: #75507b; font-weight: bold; font-size: 1.2em; 
-            border-bottom: 1px dashed #333; margin: 30px 0 15px 0; padding-bottom: 5px;
-        }
-        .entry { 
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 10px; border-bottom: 1px solid #111; transition: background 0.1s;
-        }
-        .entry:hover { background: rgba(138, 226, 52, 0.05); }
-        .entry-name { color: #8ae234; font-weight: bold; width: 200px; }
-        .entry-desc { color: #888; flex: 1; font-size: 0.9em; }
-        .entry-ram { color: #555753; width: 80px; text-align: right; font-size: 0.85em; }
-        .entry-cmd { 
-            font-family: monospace; color: #00e5ff; cursor: pointer; 
-            border: 1px solid #333; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-left: 15px;
-        }
-        .entry-cmd:hover { background: #00e5ff; color: #000; }
-        
-        .nav-bar { text-align: center; margin-bottom: 20px; font-size: 0.9em; color: #555; }
-        .nav-bar a { color: #75507b; text-decoration: none; margin: 0 5px; }
-        .nav-bar a:hover { color: #fff; }
-    </style>
+    <title>App Store</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="nav-bar">
-        📟 <a href="https://ci5.run">ci5.run</a>: curl ~ 
-        📡 <a href="https://github.com/dreamswag/ci5">ci5.host</a>: core ~ 
-        🧪 <a href="https://ci5.dev">ci5.dev</a>: cork ~ 
-        🔬 <a href="https://ci5.network">ci5.network</a>: cert
+    <div class="menu-bar">
+        <div class="menu-left">
+            <span class="apple-logo"></span>
+            <span class="bold">App Store</span>
+            <span>File</span>
+            <span>Edit</span>
+            <span>Window</span>
+            <span>Help</span>
+        </div>
+        <div class="menu-right">
+            <span>🔋 100%</span>
+            <span>Sat 20 Dec 14:02</span>
+        </div>
     </div>
 
-    <div class="tui-container">
-        <div class="tui-header">
-            <span class="white">root@ci5.dev:~/registry#</span>
-            <span class="dim">UOE: ACTIVE</span>
-        </div>
-        <div class="tui-body">
+    <div class="window-frame">
+        <div class="sidebar">
+            <div class="traffic-lights">
+                <div class="light red"></div>
+                <div class="light yellow"></div>
+                <div class="light green"></div>
+            </div>
             
-            <div style="text-align:center; margin-bottom:40px;">
-                <h1 style="margin:0; color:#fff; font-size:2.5em; letter-spacing:2px;">ci5.dev</h1>
-                <div class="purple" style="font-size:1.2em;">THE CORK REGISTRY</div>
-                <div class="dim" style="margin-top:10px; max-width:600px; margin-left:auto; margin-right:auto;">
-                    The Unmanaged Operating Environment.<br>
-                    Ephemeral containers inhabiting the 6GB Leeway of the Ci5 Architecture.<br>
-                    <i>Wipe the core. Keep the corks.</i>
+            <input type="text" class="search-input" placeholder="🔍 Search">
+            
+            <div class="nav-group">
+                <div class="nav-header">Discover</div>
+                <div class="nav-item active">🔥 Featured</div>
+                <div class="nav-item">🏆 Top Charts</div>
+                <div class="nav-item">📂 Categories</div>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-header">My Ci5</div>
+                <div class="nav-item">⚡ Updates <span class="badge">1</span></div>
+                <div class="nav-item">📦 Installed</div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="hero-card">
+                <div class="hero-content">
+                    <div class="hero-tag">FEATURED CORK</div>
+                    <div class="hero-title">Suricata IDS</div>
+                    <div class="hero-desc">Enterprise-grade threat detection for your home.</div>
                 </div>
             </div>
 
-            <div id="registry-content">
-                <div class="dim">Connecting to Cork Database...</div>
-            </div>
+            <div class="section-title">Essential Security</div>
+            <div class="app-list" id="app-grid">
+                </div>
+        </div>
+    </div>
 
-            <div class="dim" style="margin-top:50px; text-align:center; font-size:0.8em; border-top:1px solid #222; padding-top:20px;">
-                147 741 <span class="purple">//</span> WIPE THE CORE <span class="purple">//</span> KEEP THE CORKS
+    <div class="dock-container">
+        <div class="dock">
+            <a href="https://ci5.run" class="dock-icon" title="Terminal">
+                <div class="icon-box term">>_</div>
+            </a>
+            <a href="https://ci5.dev" class="dock-icon" title="App Store">
+                <div class="icon-box store">A</div>
+                <div class="dock-dot"></div>
+            </a>
+            <a href="https://ci5.network" class="dock-icon" title="Network">
+                <div class="icon-box net">@</div>
+            </a>
+            <div class="separator"></div>
+            <div class="dock-icon trash">
+                <div class="icon-box bin">🗑</div>
             </div>
         </div>
     </div>
 
-<script>
-    async function load() {
-        try {
-            const res = await fetch('corks.json');
-            const db = await res.json();
-            const el = document.getElementById('registry-content');
-            el.innerHTML = '';
+    <script>
+        const apps = [
+            { id: "adguard", name: "AdGuard Home", cat: "Privacy", icon: "🛡️" },
+            { id: "unbound", name: "Unbound DNS", cat: "Networking", icon: "🌐" },
+            { id: "wireguard", name: "WireGuard", cat: "VPN", icon: "🔒" },
+            { id: "homeassistant", name: "Home Assistant", cat: "IoT", icon: "🏠" },
+            { id: "paper-mc", name: "Minecraft Server", cat: "Games", icon: "⛏️" }
+        ];
 
-            const render = (title, items) => {
-                let h = `<div class="section-header">${title}</div>`;
-                for(const [k,v] of Object.entries(items)) {
-                    h += `
-                    <div class="entry">
-                        <span class="entry-name">${k}</span>
-                        <span class="entry-desc">${v.desc}</span>
-                        <span class="entry-ram">${v.ram || '-'}</span>
-                        <span class="entry-cmd" onclick="copy('${k}')">INSTALL</span>
-                    </div>`;
-                }
-                return h;
-            };
+        const grid = document.getElementById('app-grid');
+        
+        apps.forEach(app => {
+            const el = document.createElement('div');
+            el.className = 'app-row';
+            el.innerHTML = `
+                <div class="app-icon">${app.icon}</div>
+                <div class="app-details">
+                    <div class="app-name">${app.name}</div>
+                    <div class="app-cat">${app.cat}</div>
+                </div>
+                <button class="get-btn" onclick="install('${app.id}', this)">GET</button>
+            `;
+            grid.appendChild(el);
+        });
 
-            el.innerHTML += render('OFFICIAL MODULES', db.official);
-            el.innerHTML += render('COMMUNITY MODULES', db.community);
-
-        } catch(e) {
-            document.getElementById('registry-content').innerHTML = "<span class='red'>REGISTRY OFFLINE.</span>";
+        function install(id, btn) {
+            btn.textContent = "COPIED";
+            btn.classList.add('installed');
+            navigator.clipboard.writeText(`cork install ${id}`);
+            setTimeout(() => {
+                btn.textContent = "OPEN";
+            }, 1000);
         }
-    }
-    function copy(t) { navigator.clipboard.writeText(`cork install ${t}`); alert(`Command copied: cork install ${t}`); }
-    load();
-</script>
+    </script>
 </body>
 </html>
