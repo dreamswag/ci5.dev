@@ -5,12 +5,12 @@
 ## 🥼 **Unmanaged Operating Environment (UOE)** 🥽
 
 Ci5 separates the network into two planes:
-1.  **LET (Logical Execution Time):** `core` **Operating System** 
+1.  **LET (Logical Execution Time):** `core` **Operating System**
 
-             > Immutable, timing-critical, essential. (The Router)
+             > Immutable, timing-critical, essential. (Router)
 2.  **UOE (Unmanaged Operating Environment):** `cork` **Layer**
 
-             > Mutable, chaotic, optional. (The Apps)
+             > Mutable, chaotic, optional. (Apps)
 
 ## 😶‍🌫️ Leeway 😶‍🌫️
 **Raspberry Pi 5 8GB** provides **~7GB of "Leeway" RAM** that is not required for routing.  
