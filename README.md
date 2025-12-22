@@ -10,7 +10,7 @@
 - ~6.5GB is available for Corks
   -  sandboxed services that don't compromise network stability
 
-## 🌠 **ci5.dev 🃏 / 🌠 [canon]** 🃏
+## 🌠 **ci5.dev 🃏 // 🌠 [canon]** 🃏
 
 ### Official Corks
 
