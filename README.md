@@ -2,7 +2,7 @@
 
 # 🧬⚗️ **[ci5.dev](https://ci5.dev): [cork]munity** 👨‍🔬🧪
 
-## 🥽 "Corks?"
+## 🥽 "Corks?" 🍾
 
 **Docker containers that run in your Pi 5's "Leeway" RAM:**
 
@@ -10,11 +10,7 @@
 - ~6.5GB is available for Corks
   -  sandboxed services that don't compromise network stability
 
----
-
-## 📦 Registry
-
-> ⚠️ **'Ci5 Approved'** Corks:
+## 🌠🃏 **ci5.dev/canon** 
 
 ### Official Corks
 
