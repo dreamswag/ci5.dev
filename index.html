@@ -36,14 +36,14 @@
             
             <div class="nav-group">
                 <div class="nav-header">Discover</div>
-                <div class="nav-item active" onclick="switchView('official')">🔥 Official Corks</div>
+                <div class="nav-item active" onclick="switchView('official')">🌠 Official</div>
                 <div class="nav-item" onclick="switchView('top')">🏆 Top Charts</div>
                 <div class="nav-item" onclick="switchView('cats')">📂 Categories</div>
             </div>
             
             <div class="nav-group">
                 <div class="nav-header">Community</div>
-                <div class="nav-item" onclick="switchView('community')">🌍 Community Labs</div>
+                <div class="nav-item" onclick="switchView('community')">🌍 Community Registry</div>
                 <div class="nav-item" onclick="switchView('submit')">📦 Submit Cork <span class="badge">+</span></div>
             </div>
         </div>
@@ -116,16 +116,37 @@
             </div>
             
             <div class="modal-body">
-                <p id="modal-desc">Description goes here...</p>
+                <p id="modal-desc" class="desc-text">Description goes here...</p>
                 
                 <div class="stat-row">
                     <div class="stat-box">
                         <div class="stat-label">RAM USAGE</div>
                         <div class="stat-val" id="modal-ram">128MB</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="stat-label">AUDIT RESULT</div>
-                        <div class="stat-val safe" id="modal-audit">SAFE</div>
+                </div>
+
+                <div class="telemetry-section">
+                    <div class="section-header">COMMUNITY SIGNAL</div>
+                    
+                    <div id="community-ram-box" class="stat-box large">
+                        </div>
+
+                    <div class="vote-actions">
+                        <div class="vote-inputs">
+                            <select id="vote-ram" class="minimal-select">
+                                <option value="64">64 MB</option>
+                                <option value="128">128 MB</option>
+                                <option value="256">256 MB</option>
+                                <option value="512">512 MB</option>
+                                <option value="1024">1 GB</option>
+                                <option value="2048">2 GB+</option>
+                            </select>
+                            <select id="vote-status" class="minimal-select">
+                                <option value="OK">CORKS (STABLE)</option>
+                                <option value="FAIL">WON'T (CRASH)</option>
+                            </select>
+                        </div>
+                        <button id="telemetry-action-btn" class="vote-btn">LOADING...</button>
                     </div>
                 </div>
 
