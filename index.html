@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>App Store</title>
+    <title>Ci5 Registry</title>
     <link rel="stylesheet" href="static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -10,16 +10,17 @@
 
     <div class="menu-bar">
         <div class="menu-left">
-            <span class="apple-logo"></span>
-            <span class="bold">App Store</span>
+            <span class="apple-logo">🛡️</span>
+            <span class="bold">Ci5 Registry</span>
             <span>File</span>
             <span>Edit</span>
+            <span>View</span>
             <span>Window</span>
             <span>Help</span>
         </div>
         <div class="menu-right">
             <span>🔋 100%</span>
-            <span>Sat 20 Dec 14:02</span>
+            <span id="clock-display">Sat 20 Dec 14:02</span>
         </div>
     </div>
 
@@ -31,19 +32,19 @@
                 <div class="light green"></div>
             </div>
             
-            <input type="text" class="search-input" placeholder="🔍 Search">
+            <input type="text" class="search-input" placeholder="🔍 Search Corks...">
             
             <div class="nav-group">
                 <div class="nav-header">Discover</div>
-                <div class="nav-item active">🔥 Featured</div>
+                <div class="nav-item active">🔥 Official Corks</div>
                 <div class="nav-item">🏆 Top Charts</div>
                 <div class="nav-item">📂 Categories</div>
             </div>
             
             <div class="nav-group">
-                <div class="nav-header">My Ci5</div>
-                <div class="nav-item">⚡ Updates <span class="badge">1</span></div>
-                <div class="nav-item">📦 Installed</div>
+                <div class="nav-header">Community</div>
+                <div class="nav-item">📦 Submissions <span class="badge" id="comm-count">0</span></div>
+                <div class="nav-item">⚡ Updates</div>
             </div>
         </div>
 
@@ -52,12 +53,22 @@
                 <div class="hero-content">
                     <div class="hero-tag">FEATURED CORK</div>
                     <div class="hero-title">Suricata IDS</div>
-                    <div class="hero-desc">Enterprise-grade threat detection for your home.</div>
+                    <div class="hero-desc">Enterprise-grade threat detection. Now optimized for Pi 5 Leeway.</div>
+                    <button class="hero-btn">VIEW DETAILS</button>
                 </div>
             </div>
 
-            <div class="section-title">Essential Security</div>
-            <div class="app-list" id="app-grid">
+            <div class="section-title">
+                <span>🛡️ Verified Official</span>
+                <span class="signer-tag" id="signer-display">AUTH: LOADING...</span>
+            </div>
+            <div class="app-list" id="official-grid">
+                </div>
+
+            <div class="section-title">
+                <span>🌍 Community Labs</span>
+            </div>
+            <div class="app-list" id="community-grid">
                 </div>
         </div>
     </div>
@@ -65,55 +76,19 @@
     <div class="dock-container">
         <div class="dock">
             <a href="https://ci5.run" class="dock-icon" title="Terminal">
-                <div class="icon-box term">>_</div>
+                <div class="icon-box term">></div>
             </a>
-            <a href="https://ci5.dev" class="dock-icon" title="App Store">
-                <div class="icon-box store">A</div>
+            <a href="https://ci5.dev" class="dock-icon" title="Registry">
+                <div class="icon-box store">🧪</div>
                 <div class="dock-dot"></div>
             </a>
             <a href="https://ci5.network" class="dock-icon" title="Network">
-                <div class="icon-box net">@</div>
+                <div class="icon-box net">🥼</div>
             </a>
             <div class="separator"></div>
-            <div class="dock-icon trash">
-                <div class="icon-box bin">🗑</div>
-            </div>
         </div>
     </div>
 
-    <script>
-        const apps = [
-            { id: "adguard", name: "AdGuard Home", cat: "Privacy", icon: "🛡️" },
-            { id: "unbound", name: "Unbound DNS", cat: "Networking", icon: "🌐" },
-            { id: "wireguard", name: "WireGuard", cat: "VPN", icon: "🔒" },
-            { id: "homeassistant", name: "Home Assistant", cat: "IoT", icon: "🏠" },
-            { id: "paper-mc", name: "Minecraft Server", cat: "Games", icon: "⛏️" }
-        ];
-
-        const grid = document.getElementById('app-grid');
-        
-        apps.forEach(app => {
-            const el = document.createElement('div');
-            el.className = 'app-row';
-            el.innerHTML = `
-                <div class="app-icon">${app.icon}</div>
-                <div class="app-details">
-                    <div class="app-name">${app.name}</div>
-                    <div class="app-cat">${app.cat}</div>
-                </div>
-                <button class="get-btn" onclick="install('${app.id}', this)">GET</button>
-            `;
-            grid.appendChild(el);
-        });
-
-        function install(id, btn) {
-            btn.textContent = "COPIED";
-            btn.classList.add('installed');
-            navigator.clipboard.writeText(`cork install ${id}`);
-            setTimeout(() => {
-                btn.textContent = "OPEN";
-            }, 1000);
-        }
-    </script>
+    <script src="static/script.js"></script>
 </body>
 </html>
