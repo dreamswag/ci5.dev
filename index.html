@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <title>Ci5 Registry</title>
     <link rel="stylesheet" href="static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <div class="menu-bar">
         <div class="menu-left">
-            <span class="apple-logo">🛡️</span>
+            <span class="apple-logo">🃏</span>
             <span class="bold">Ci5 Registry</span>
             <span>File</span>
             <span>Edit</span>
@@ -32,44 +32,112 @@
                 <div class="light green"></div>
             </div>
             
-            <input type="text" class="search-input" placeholder="🔍 Search Corks...">
+            <input type="text" id="search-box" class="search-input" placeholder="🔍 Search Corks...">
             
             <div class="nav-group">
                 <div class="nav-header">Discover</div>
-                <div class="nav-item active">🔥 Official Corks</div>
-                <div class="nav-item">🏆 Top Charts</div>
-                <div class="nav-item">📂 Categories</div>
+                <div class="nav-item active" onclick="switchView('official')">🔥 Official Corks</div>
+                <div class="nav-item" onclick="switchView('top')">🏆 Top Charts</div>
+                <div class="nav-item" onclick="switchView('cats')">📂 Categories</div>
             </div>
             
             <div class="nav-group">
                 <div class="nav-header">Community</div>
-                <div class="nav-item">📦 Submissions <span class="badge" id="comm-count">0</span></div>
-                <div class="nav-item">⚡ Updates</div>
+                <div class="nav-item" onclick="switchView('community')">🌍 Community Labs</div>
+                <div class="nav-item" onclick="switchView('submit')">📦 Submit Cork <span class="badge">+</span></div>
             </div>
         </div>
 
         <div class="content-area">
-            <div class="hero-card">
-                <div class="hero-content">
-                    <div class="hero-tag">FEATURED CORK</div>
-                    <div class="hero-title">Suricata IDS</div>
-                    <div class="hero-desc">Enterprise-grade threat detection. Now optimized for Pi 5 Leeway.</div>
-                    <button class="hero-btn">VIEW DETAILS</button>
-                </div>
-            </div>
-
-            <div class="section-title">
-                <span>🛡️ Verified Official</span>
-                <span class="signer-tag" id="signer-display">AUTH: LOADING...</span>
-            </div>
-            <div class="app-list" id="official-grid">
+            <div id="browser-view">
+                <div class="hero-card" id="hero-card">
+                    <div class="hero-content">
+                        <div class="hero-tag">FEATURED CORK</div>
+                        <div class="hero-title">Suricata IDS</div>
+                        <div class="hero-desc">Enterprise-grade threat detection. Now optimized for Pi 5 Leeway.</div>
+                        <button class="hero-btn" onclick="openDetail('suricata', 'official')">VIEW DETAILS</button>
+                    </div>
                 </div>
 
-            <div class="section-title">
-                <span>🌍 Community Labs</span>
-            </div>
-            <div class="app-list" id="community-grid">
+                <div class="section-title">
+                    <span id="section-header">🛡️ Verified Official</span>
+                    <span class="signer-tag" id="signer-display">AUTH: LOADING...</span>
                 </div>
+                <div class="app-list" id="main-grid">
+                    </div>
+            </div>
+
+            <div id="submission-view" class="hidden">
+                <div class="section-title"><span>📝 Submit a Cork</span></div>
+                <div class="submission-form">
+                    <p class="form-desc">Use this wizard to generate a valid registry entry for the Ci5 network.</p>
+                    
+                    <div class="form-group">
+                        <label>Cork Name (ID)</label>
+                        <input type="text" id="sub-name" placeholder="e.g., minecraft-paper">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>GitHub Repo URL</label>
+                        <input type="text" id="sub-repo" placeholder="https://github.com/username/cork-name">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description (Short)</label>
+                        <input type="text" id="sub-desc" placeholder="What does it do?">
+                    </div>
+
+                    <div class="form-group">
+                        <label>RAM Requirement</label>
+                        <select id="sub-ram">
+                            <option value="64MB">64MB (Tiny)</option>
+                            <option value="128MB">128MB (Small)</option>
+                            <option value="512MB">512MB (Medium)</option>
+                            <option value="1GB">1GB (Large)</option>
+                            <option value="2GB+">2GB+ (Heavy)</option>
+                        </select>
+                    </div>
+
+                    <button class="hero-btn action-btn" onclick="generateSubmission()">GENERATE JSON & OPEN PR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal(event)">
+        <div class="modal-window">
+            <div class="modal-header">
+                <div class="app-icon large" id="modal-icon">📦</div>
+                <div class="modal-title-group">
+                    <h2 id="modal-title">App Name</h2>
+                    <span class="signer-tag" id="modal-tag">OFFICIAL</span>
+                </div>
+                <button class="close-btn" onclick="toggleModal(false)">×</button>
+            </div>
+            
+            <div class="modal-body">
+                <p id="modal-desc">Description goes here...</p>
+                
+                <div class="stat-row">
+                    <div class="stat-box">
+                        <div class="stat-label">RAM USAGE</div>
+                        <div class="stat-val" id="modal-ram">128MB</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">AUDIT RESULT</div>
+                        <div class="stat-val safe" id="modal-audit">SAFE</div>
+                    </div>
+                </div>
+
+                <div class="install-box">
+                    <div class="install-label">INSTALL COMMAND</div>
+                    <code id="modal-cmd" onclick="copyCmd(this)">ci5 install appname</code>
+                </div>
+
+                <div class="modal-actions">
+                    <a href="#" id="modal-source" target="_blank" class="text-link">View Source Code ↗</a>
+                </div>
+            </div>
         </div>
     </div>
 
