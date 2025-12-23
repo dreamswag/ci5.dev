@@ -1,9 +1,7 @@
 let REGISTRY_DATA = null;
-const TELEMETRY_REPO = "dreamswag/ci5"; // The repo where voting threads live
+const TELEMETRY_REPO = "dreamswag/ci5"; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    updateClock();
-    setInterval(updateClock, 60000);
     fetchCorks();
     
     // Search Listener
@@ -12,24 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function updateClock() {
-    const now = new Date();
-    const opts = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
-    document.getElementById('clock-display').innerText = now.toLocaleDateString('en-GB', opts);
-}
-
 async function fetchCorks() {
     try {
         const response = await fetch('corks.json');
         if (!response.ok) throw new Error("Manifest Missing");
         REGISTRY_DATA = await response.json();
         
-        // Update Meta
         if (document.getElementById('signer-display')) {
             document.getElementById('signer-display').innerText = `AUTH: ${REGISTRY_DATA.meta.signing_authority}`;
         }
         
-        // Initial Render (Official)
         switchView('official');
         
     } catch (error) {
@@ -41,46 +31,46 @@ async function fetchCorks() {
 }
 
 // VIEW CONTROLLER
-function switchView(viewName) {
+function switchView(viewName, element) {
     const browser = document.getElementById('browser-view');
     const submission = document.getElementById('submission-view');
-    const grid = document.getElementById('main-grid');
     const header = document.getElementById('section-header');
     const hero = document.getElementById('hero-card');
 
-    // Reset UI
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    // NAV HIGHLIGHT LOGIC
+    if (element) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+    }
+    
+    // Hide All Views
+    browser.classList.add('hidden');
+    submission.classList.add('hidden');
 
     if (viewName === 'submit') {
-        browser.classList.add('hidden');
         submission.classList.remove('hidden');
         return;
     }
 
     // Browser Mode
-    submission.classList.add('hidden');
     browser.classList.remove('hidden');
+    const grid = document.getElementById('main-grid');
     grid.innerHTML = '';
 
     if (viewName === 'official') {
-        header.innerText = "🛡️ Verified Official";
+        header.innerText = "🃏 ci5-canon-corks";
         hero.classList.remove('hidden');
         renderRows(REGISTRY_DATA.official, true);
-    } else if (viewName === 'community') {
-        header.innerText = "🌍 Community Labs";
+    } else if (viewName === 'top') {
+        header.innerText = "🌠 Fan Favourite Corks";
         hero.classList.add('hidden');
         renderRows(REGISTRY_DATA.community, false);
-    } else if (viewName === 'top') {
-        header.innerText = "🏆 Top Charts (By Stability)";
+    } else if (viewName === 'community') {
+        header.innerText = "🛸 Recently Deployed Corks";
         hero.classList.add('hidden');
         const all = { ...REGISTRY_DATA.official, ...REGISTRY_DATA.community };
         renderRows(all, false); 
-    } else if (viewName === 'cats') {
-        header.innerText = "📂 All Categories";
-        hero.classList.add('hidden');
-        const all = { ...REGISTRY_DATA.official, ...REGISTRY_DATA.community };
-        renderRows(all, false);
-    }
+    } 
 }
 
 function renderRows(corksObj, isOfficial) {
@@ -89,7 +79,7 @@ function renderRows(corksObj, isOfficial) {
     Object.entries(corksObj).forEach(([key, cork]) => {
         const el = document.createElement('div');
         el.className = 'app-row';
-        el.onclick = () => openDetail(key, isOfficial ? 'official' : 'community'); // Click Row -> Open Modal
+        el.onclick = () => openDetail(key, isOfficial ? 'official' : 'community'); 
         
         let statusDot = '<span class="status-dot dot-suspicious"></span>';
         if (cork.audit && cork.audit.audit_result === 'SAFE') {
@@ -121,7 +111,6 @@ function openDetail(key, type) {
     
     if(!cork) return;
 
-    // Populate Basic Info
     document.getElementById('modal-title').innerText = key;
     document.getElementById('modal-desc').innerText = cork.desc;
     document.getElementById('modal-ram').innerText = cork.ram || "Unknown";
@@ -129,15 +118,12 @@ function openDetail(key, type) {
     document.getElementById('modal-cmd').innerText = `ci5 install ${key}`;
     document.getElementById('modal-source').href = `https://github.com/${cork.repo}`;
     
-    // Aesthetic Updates
     const tag = document.getElementById('modal-tag');
     tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "COMMUNITY";
     tag.style.color = type === 'official' ? "#30d158" : "#ff9f0a";
     tag.style.borderColor = type === 'official' ? "#30d158" : "#ff9f0a";
 
-    // Trigger Telemetry Lookup
     loadDynamicTelemetry(key);
-
     toggleModal(true);
 }
 
@@ -145,23 +131,19 @@ async function loadDynamicTelemetry(corkID) {
     const box = document.getElementById('community-ram-box');
     const btn = document.getElementById('telemetry-action-btn');
     
-    // Reset UI to "Loading" State
     box.innerHTML = '<span style="animation: blink 1s infinite">SEARCHING SIGNAL...</span>';
     btn.onclick = null; 
     btn.innerText = "LOADING...";
 
     try {
-        // Search for issue named "TELEMETRY: [corkID]"
         const query = `repo:${TELEMETRY_REPO} is:issue in:title "TELEMETRY: ${corkID}"`;
         const searchReq = await fetch(`https://api.github.com/search/issues?q=${encodeURIComponent(query)}`);
         const searchData = await searchReq.json();
 
         if (searchData.total_count > 0) {
-            // Found it
             const issue = searchData.items[0];
             fetchStatsFromComments(issue.number, issue.html_url);
         } else {
-            // Not found
             box.innerHTML = '<span style="color:#888">NO DATA SIGNAL</span>';
             setupTelemetryButton(corkID, null, false);
         }
@@ -180,16 +162,17 @@ async function fetchStatsFromComments(issueNumber, issueUrl) {
 
     let totalRam = 0;
     let count = 0;
-    let works = 0;
-    let broken = 0;
+    let corks = 0; 
+    let dorks = 0; 
 
     comments.forEach(c => {
         const text = c.body.toUpperCase();
         if (text.includes('[TELEMETRY]')) {
             const ramMatch = text.match(/RAM:(\d+)/);
             if (ramMatch) { totalRam += parseInt(ramMatch[1]); count++; }
-            if (text.includes('STATUS:OK')) works++;
-            if (text.includes('STATUS:FAIL')) broken++;
+            
+            if (text.includes('STATUS:CORK') || text.includes('STATUS:OK')) corks++;
+            if (text.includes('STATUS:DORK') || text.includes('STATUS:FAIL')) dorks++;
         }
     });
 
@@ -197,12 +180,12 @@ async function fetchStatsFromComments(issueNumber, issueUrl) {
         box.innerHTML = '<span style="color:#888">AWAITING FIRST REPORT</span>';
     } else {
         const avgRam = Math.round(totalRam / count);
-        const reliability = Math.round((works / (works + broken)) * 100);
+        const reliability = Math.round((corks / (corks + dorks)) * 100);
         
         box.innerHTML = `
             <div class="telemetry-grid">
                 <div class="t-col"><div class="t-lbl">USAGE</div><div class="t-val">${avgRam}MB</div></div>
-                <div class="t-col"><div class="t-lbl">STABILITY</div><div class="t-val" style="color:${reliability > 80 ? '#30d158' : '#ff453a'}">${reliability}%</div></div>
+                <div class="t-col"><div class="t-lbl">CORKS %</div><div class="t-val" style="color:${reliability > 80 ? '#30d158' : '#ff453a'}">${reliability}%</div></div>
                 <div class="t-col"><div class="t-lbl">REPORTS</div><div class="t-val">${count}</div></div>
             </div>
         `;
@@ -226,7 +209,7 @@ function setupTelemetryButton(corkID, issueUrl, exists) {
         btn.innerText = "INITIALIZE THREAD";
         btn.onclick = () => {
             const title = `TELEMETRY: ${corkID}`;
-            const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:OK\``;
+            const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:CORK\``;
             window.open(`https://github.com/${TELEMETRY_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
         };
     }
@@ -253,7 +236,6 @@ function copyCmd(el) {
     }, 1500);
 }
 
-// SUBMISSION LOGIC
 function generateSubmission() {
     const name = document.getElementById('sub-name').value;
     const repo = document.getElementById('sub-repo').value;

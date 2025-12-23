@@ -4,23 +4,52 @@
     <meta charset="UTF-8">
     <title>Ci5 Registry</title>
     <link rel="stylesheet" href="static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <div class="menu-bar">
         <div class="menu-left">
-            <span class="apple-logo">🃏</span>
-            <span class="bold">Ci5 Registry</span>
-            <span>File</span>
-            <span>Edit</span>
-            <span>View</span>
-            <span>Window</span>
-            <span>Help</span>
+            <a href="https://github.com/dreamswag/ci5" target="_blank" class="logo-group">
+                <span class="apple-logo">🃏</span>
+                <span class="bold">Ci5</span>
+            </a>
+            
+            <div class="menu-item">
+                <span class="menu-label">run</span>
+                <div class="dropdown">
+                    <a href="https://ci5.run" target="_blank">Native Interface</a>
+                    <a href="https://github.com/dreamswag/ci5.run" target="_blank">GitHub Repo</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <span class="menu-label">host</span>
+                <div class="dropdown">
+                    <a href="https://ci5.host" target="_blank">Native Interface</a>
+                    <a href="https://github.com/dreamswag/ci5.host" target="_blank">GitHub Repo</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <span class="menu-label">dev</span>
+                <div class="dropdown">
+                    <a href="https://ci5.dev" target="_blank">Native Interface</a>
+                    <a href="https://github.com/dreamswag/ci5.dev" target="_blank">GitHub Repo</a>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <span class="menu-label">network</span>
+                <div class="dropdown">
+                    <a href="https://ci5.network" target="_blank">Native Interface</a>
+                    <a href="https://github.com/dreamswag/ci5.network" target="_blank">GitHub Repo</a>
+                </div>
+            </div>
         </div>
+        
         <div class="menu-right">
-            <span>🔋 100%</span>
-            <span id="clock-display">Sat 20 Dec 14:02</span>
+            <span class="static-msg">N0 R19H75 D353RV3D. 🎪 <span class="version-tag">v7.4-RC-1</span></span>
         </div>
     </div>
 
@@ -35,16 +64,19 @@
             <input type="text" id="search-box" class="search-input" placeholder="🔍 Search Corks...">
             
             <div class="nav-group">
-                <div class="nav-header">Discover</div>
-                <div class="nav-item active" onclick="switchView('official')">🌠 Official</div>
-                <div class="nav-item" onclick="switchView('top')">🏆 Top Charts</div>
-                <div class="nav-item" onclick="switchView('cats')">📂 Categories</div>
+                <div class="nav-header">Verified</div>
+                <div class="nav-item active" onclick="switchView('official', this)">🃏 ci5-canon</div>
             </div>
             
             <div class="nav-group">
-                <div class="nav-header">Community</div>
-                <div class="nav-item" onclick="switchView('community')">🌍 Community Registry</div>
-                <div class="nav-item" onclick="switchView('submit')">📦 Submit Cork <span class="badge">+</span></div>
+                <div class="nav-header">Cork Registry</div>
+                <div class="nav-item" onclick="switchView('top', this)">🌠 User Favourites</div>
+                <div class="nav-item" onclick="switchView('community', this)">🛸 Recently Deployed</div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-header">My Ci5-ASH</div>
+                <div class="nav-item" onclick="switchView('submit', this)">📦 Submit Cork<span class="badge">+</span></div>
             </div>
         </div>
 
@@ -60,7 +92,7 @@
                 </div>
 
                 <div class="section-title">
-                    <span id="section-header">🛡️ Verified Official</span>
+                    <span id="section-header">🃏 ci5-canon-corks</span>
                     <span class="signer-tag" id="signer-display">AUTH: LOADING...</span>
                 </div>
                 <div class="app-list" id="main-grid">
@@ -71,22 +103,18 @@
                 <div class="section-title"><span>📝 Submit a Cork</span></div>
                 <div class="submission-form">
                     <p class="form-desc">Use this wizard to generate a valid registry entry for the Ci5 network.</p>
-                    
                     <div class="form-group">
                         <label>Cork Name (ID)</label>
                         <input type="text" id="sub-name" placeholder="e.g., minecraft-paper">
                     </div>
-                    
                     <div class="form-group">
                         <label>GitHub Repo URL</label>
                         <input type="text" id="sub-repo" placeholder="https://github.com/username/cork-name">
                     </div>
-
                     <div class="form-group">
                         <label>Description (Short)</label>
                         <input type="text" id="sub-desc" placeholder="What does it do?">
                     </div>
-
                     <div class="form-group">
                         <label>RAM Requirement</label>
                         <select id="sub-ram">
@@ -97,7 +125,6 @@
                             <option value="2GB+">2GB+ (Heavy)</option>
                         </select>
                     </div>
-
                     <button class="hero-btn action-btn" onclick="generateSubmission()">GENERATE JSON & OPEN PR</button>
                 </div>
             </div>
@@ -127,10 +154,7 @@
 
                 <div class="telemetry-section">
                     <div class="section-header">COMMUNITY SIGNAL</div>
-                    
-                    <div id="community-ram-box" class="stat-box large">
-                        </div>
-
+                    <div id="community-ram-box" class="stat-box large"></div>
                     <div class="vote-actions">
                         <div class="vote-inputs">
                             <select id="vote-ram" class="minimal-select">
@@ -142,8 +166,8 @@
                                 <option value="2048">2 GB+</option>
                             </select>
                             <select id="vote-status" class="minimal-select">
-                                <option value="OK">CORKS (STABLE)</option>
-                                <option value="FAIL">WON'T (CRASH)</option>
+                                <option value="CORK">CORK (STABLE)</option>
+                                <option value="DORK">DORK (BROKEN)</option>
                             </select>
                         </div>
                         <button id="telemetry-action-btn" class="vote-btn">LOADING...</button>
@@ -162,22 +186,7 @@
         </div>
     </div>
 
-    <div class="dock-container">
-        <div class="dock">
-            <a href="https://ci5.run" class="dock-icon" title="Terminal">
-                <div class="icon-box term">></div>
-            </a>
-            <a href="https://ci5.dev" class="dock-icon" title="Registry">
-                <div class="icon-box store">🧪</div>
-                <div class="dock-dot"></div>
-            </a>
-            <a href="https://ci5.network" class="dock-icon" title="Network">
-                <div class="icon-box net">🥼</div>
-            </a>
-            <div class="separator"></div>
-        </div>
-    </div>
-
+    <div class="dock-container hidden"></div>
     <script src="static/script.js"></script>
 </body>
 </html>
