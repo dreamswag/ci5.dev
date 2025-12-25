@@ -64,9 +64,19 @@ body {
     align-items: center;
 }
 
-/* Hide on mobile */
+/* Show menu items on mobile - compact styling */
 .hide-mobile {
-    display: none;
+    display: flex;
+}
+
+/* Compact menu items on mobile */
+.menu-item {
+    font-size: 11px;
+}
+
+.menu-label {
+    padding: 4px 8px;
+    font-size: 11px;
 }
 
 /* STATIC TEXT RIGHT */
@@ -77,6 +87,7 @@ body {
     text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.5); 
     letter-spacing: -0.5px;
     font-weight: 600;
+    display: none; /* Hide on mobile */
 }
 
 /* VERSION TAG */
@@ -791,8 +802,8 @@ code::after {
         padding: 0 15px;
     }
     
-    .hide-mobile {
-        display: flex;
+    .static-msg {
+        display: inline;
     }
     
     .mobile-sidebar-toggle {
