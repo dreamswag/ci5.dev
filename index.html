@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ci5 Registry</title>
     <link rel="stylesheet" href="static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -15,7 +18,7 @@
                 <span class="bold">Ci5</span>
             </a>
             
-            <div class="menu-item">
+            <div class="menu-item hide-mobile">
                 <span class="menu-label">run</span>
                 <div class="dropdown">
                     <a href="https://ci5.run" target="_blank">Native Interface</a>
@@ -23,7 +26,7 @@
                 </div>
             </div>
 
-            <div class="menu-item">
+            <div class="menu-item hide-mobile">
                 <span class="menu-label">host</span>
                 <div class="dropdown">
                     <a href="https://ci5.host" target="_blank">Native Interface</a>
@@ -31,7 +34,7 @@
                 </div>
             </div>
 
-            <div class="menu-item">
+            <div class="menu-item hide-mobile">
                 <span class="menu-label">dev</span>
                 <div class="dropdown">
                     <a href="https://ci5.dev" target="_blank">Native Interface</a>
@@ -39,7 +42,7 @@
                 </div>
             </div>
 
-            <div class="menu-item">
+            <div class="menu-item hide-mobile">
                 <span class="menu-label">network</span>
                 <div class="dropdown">
                     <a href="https://ci5.network" target="_blank">Native Interface</a>
@@ -49,16 +52,24 @@
         </div>
         
         <div class="menu-right">
-            <span class="static-msg">N0 R19H75 D353RV3D. 🎪 <span class="version-tag">v7.4-RC-1</span></span>
+            <span class="static-msg hide-mobile">N0 R19H75 D353RV3D. 🎪 <span class="version-tag">v7.4-RC-1</span></span>
+            <button class="mobile-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </div>
 
     <div class="window-frame">
-        <div class="sidebar">
-            <div class="traffic-lights">
-                <div class="light red"></div>
-                <div class="light yellow"></div>
-                <div class="light green"></div>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="traffic-lights hide-mobile">
+                    <div class="light red"></div>
+                    <div class="light yellow"></div>
+                    <div class="light green"></div>
+                </div>
+                <button class="sidebar-close hide-desktop" id="sidebarClose">×</button>
             </div>
             
             <input type="text" id="search-box" class="search-input" placeholder="🔍 Search Corks...">
@@ -78,7 +89,15 @@
                 <div class="nav-header">My Ci5-ASH</div>
                 <div class="nav-item" onclick="switchView('submit', this)">📦 Submit Cork<span class="badge">+</span></div>
             </div>
+
+            <div class="nav-group nav-footer">
+                <div class="nav-header">Links</div>
+                <a href="https://github.com/dreamswag/ci5" class="nav-item external" target="_blank">GitHub ↗</a>
+                <a href="https://ci5.network" class="nav-item external" target="_blank">Forums ↗</a>
+            </div>
         </div>
+
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
         <div class="content-area">
             <div id="browser-view">
@@ -96,7 +115,7 @@
                     <span class="signer-tag" id="signer-display">AUTH: LOADING...</span>
                 </div>
                 <div class="app-list" id="main-grid">
-                    </div>
+                </div>
             </div>
 
             <div id="submission-view" class="hidden">
@@ -188,5 +207,44 @@
 
     <div class="dock-container hidden"></div>
     <script src="static/script.js"></script>
+    <script>
+        // Mobile sidebar toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarClose = document.getElementById('sidebarClose');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            sidebarOverlay.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+
+        sidebarToggle.addEventListener('click', openSidebar);
+        sidebarClose.addEventListener('click', closeSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+
+        // Close sidebar when nav item is clicked on mobile
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    closeSidebar();
+                }
+            });
+        });
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                closeSidebar();
+            }
+        });
+    </script>
 </body>
 </html>
