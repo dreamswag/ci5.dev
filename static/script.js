@@ -73,6 +73,13 @@ function switchView(viewName, element) {
     } 
 }
 
+function getSubmitterFromRepo(repoPath) {
+    // Extract username from repo path like "dreamswag/cork-adguard" or "community/cork-tor-relay"
+    if (!repoPath) return 'unknown';
+    const parts = repoPath.split('/');
+    return parts[0] || 'unknown';
+}
+
 function renderRows(corksObj, isOfficial) {
     const grid = document.getElementById('main-grid');
     
@@ -87,14 +94,16 @@ function renderRows(corksObj, isOfficial) {
         }
 
         const iconChar = getIconFor(key);
+        const submitter = getSubmitterFromRepo(cork.repo);
 
         el.innerHTML = `
             <div class="app-icon">${iconChar}</div>
             <div class="app-details">
                 <div class="app-name">${key}</div>
                 <div class="app-cat">
-                    ${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}
+                    ${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'User'}
                 </div>
+                <div class="app-submitter">by ${submitter}</div>
             </div>
             <button class="get-btn">VIEW</button>
         `;
@@ -119,7 +128,7 @@ function openDetail(key, type) {
     document.getElementById('modal-source').href = `https://github.com/${cork.repo}`;
     
     const tag = document.getElementById('modal-tag');
-    tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "COMMUNITY";
+    tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "USER";
     tag.style.color = type === 'official' ? "#30d158" : "#ff9f0a";
     tag.style.borderColor = type === 'official' ? "#30d158" : "#ff9f0a";
 

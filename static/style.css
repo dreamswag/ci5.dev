@@ -134,6 +134,7 @@ body {
 .app-details { flex: 1; overflow: hidden; }
 .app-name { font-weight: 600; font-size: 15px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-cat { font-size: 11px; color: #666; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+.app-submitter { font-size: 10px; color: #444; margin-top: 2px; opacity: 0.7; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .dot-safe { background: #30d158; box-shadow: 0 0 8px rgba(48, 209, 88, 0.4); }
 .dot-suspicious { background: #ff9f0a; }
