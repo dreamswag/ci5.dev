@@ -126,6 +126,9 @@ function openDetail(key, type) {
     document.getElementById('modal-cmd').innerText = `ci5 install ${key}`;
     document.getElementById('modal-source').href = `https://github.com/${cork.repo}`;
     
+    const submitter = getSubmitterFromRepo(cork.repo);
+    document.getElementById('modal-submitter').innerText = `by ${submitter}`;
+    
     const tag = document.getElementById('modal-tag');
     tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "COMMUNITY";
     tag.style.color = type === 'official' ? "#30d158" : "#ff9f0a";
