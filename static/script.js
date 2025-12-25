@@ -68,8 +68,7 @@ function switchView(viewName, element) {
     } else if (viewName === 'community') {
         header.innerText = "🛸 Recently Deployed Corks";
         hero.classList.add('hidden');
-        const all = { ...REGISTRY_DATA.official, ...REGISTRY_DATA.community };
-        renderRows(all, false); 
+        renderRows(REGISTRY_DATA.community, false); 
     } 
 }
 
@@ -101,7 +100,7 @@ function renderRows(corksObj, isOfficial) {
             <div class="app-details">
                 <div class="app-name">${key}</div>
                 <div class="app-cat">
-                    ${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'User'}
+                    ${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}
                 </div>
                 <div class="app-submitter">by ${submitter}</div>
             </div>
@@ -128,7 +127,7 @@ function openDetail(key, type) {
     document.getElementById('modal-source').href = `https://github.com/${cork.repo}`;
     
     const tag = document.getElementById('modal-tag');
-    tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "USER";
+    tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "COMMUNITY";
     tag.style.color = type === 'official' ? "#30d158" : "#ff9f0a";
     tag.style.borderColor = type === 'official' ? "#30d158" : "#ff9f0a";
 
