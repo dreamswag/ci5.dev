@@ -27,25 +27,6 @@
         "duration_seconds": 60
       }
     },
-    "unbound": {
-      "repo": "dreamswag/cork-unbound",
-      "desc": "Recursive caching DNS resolver. (Privacy)",
-      "ram": "64MB",
-      "signature": {
-        "hash": "sha256:b2c3d4e5f67890123456789012345678901234ef",
-        "signer": "jape.eth",
-        "signed_at": "2025-12-20T00:00:00Z",
-        "expires_at": "2026-12-20T00:00:00Z"
-      },
-      "audit": {
-        "audit_hash": "cure_8a9b0c1d2e3f",
-        "audit_date": "2025-12-20T14:35:00Z",
-        "audit_result": "SAFE",
-        "auditor_id": "dreamswag",
-        "network_isolated": true,
-        "duration_seconds": 60
-      }
-    },
     "ntopng": {
       "repo": "dreamswag/cork-ntopng",
       "desc": "Traffic analysis and flow monitoring.",
