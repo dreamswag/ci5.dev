@@ -62,7 +62,7 @@ function switchView(viewName, element) {
         hero.classList.remove('hidden');
         renderRows(REGISTRY_DATA.official, true);
     } else if (viewName === 'top') {
-        header.innerText = "🌠 Fan Favourite Corks";
+        header.innerText = "🌠 User Favourite Corks";
         hero.classList.add('hidden');
         renderRows(REGISTRY_DATA.community, false);
     } else if (viewName === 'community') {
