@@ -88,7 +88,19 @@
 
             <div class="nav-group">
                 <div class="nav-header">My Ci5-ASH</div>
-                <div class="nav-item" onclick="switchView('submit', this)">📦 Submit Cork<span class="badge">+</span></div>
+                
+                <div id="auth-guest">
+                    <div class="nav-item highlight-item" onclick="startDeviceAuth()">🔐 Login via GitHub</div>
+                </div>
+
+                <div id="auth-user" class="hidden">
+                    <div class="nav-item user-item" onclick="logout()">
+                        <img id="sidebar-avatar" src="" alt="">
+                        <span id="sidebar-username">...</span>
+                        <span class="logout-icon">⏻</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('submit', this)">📦 Submit Cork<span class="badge">+</span></div>
+                </div>
             </div>
 
             <div class="nav-group nav-footer">
@@ -124,7 +136,12 @@
             <div id="submission-view" class="hidden">
                 <div class="section-title"><span>📝 Submit a Cork</span></div>
                 <div class="submission-form">
-                    <p class="form-desc">Use this wizard to generate a valid registry entry for the Ci5 network.</p>
+                    <div class="form-header-group">
+                        <p class="form-desc">Generate a valid registry entry. <strong>Ci5-ASH Identity Required.</strong></p>
+                        <div class="user-badge" id="form-user-badge">
+                            </div>
+                    </div>
+                    
                     <div class="form-group">
                         <label>Cork Name (ID)</label>
                         <input type="text" id="sub-name" placeholder="e.g., minecraft-paper">
@@ -178,7 +195,7 @@
                 </div>
 
                 <div class="telemetry-section">
-                    <div class="section-header">COMMUNITY SIGNAL</div>
+                    <div class="section-header">COMMUNITY SIGNAL (ASH VERIFIED)</div>
                     <div id="community-ram-box" class="stat-box large"></div>
                     <div class="vote-actions">
                         <div class="vote-inputs">
@@ -211,10 +228,40 @@
         </div>
     </div>
 
+    <div id="auth-overlay" class="modal-overlay hidden">
+        <div class="modal-window auth-window">
+            <div class="modal-header">
+                <div class="app-icon large">🔐</div>
+                <div class="modal-title-group">
+                    <h2>Device Authentication</h2>
+                    <span class="signer-tag" style="color:#aaa; border-color:#555;">GITHUB OAUTH</span>
+                </div>
+                <button class="close-btn" onclick="closeAuthModal()">×</button>
+            </div>
+            
+            <div class="modal-body center-text">
+                <div id="auth-loading">
+                    <div class="spinner"></div>
+                    <p class="desc-text" style="margin-top:15px;">Connecting to GitHub...</p>
+                </div>
+
+                <div id="auth-code-section" class="hidden">
+                    <p class="desc-text">Enter this verification code at <br><a href="https://github.com/login/device" target="_blank" class="text-link">github.com/login/device</a></p>
+                    
+                    <div class="auth-code-display" id="user-code">XXXX-XXXX</div>
+                    
+                    <div class="auth-status">
+                        <span class="spinner-small"></span> Waiting for authorization...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="dock-container hidden"></div>
     <script src="static/script.js"></script>
     <script>
-        // Mobile sidebar toggle
+        // Mobile sidebar toggle (Existing Logic Preserved)
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebarClose = document.getElementById('sidebarClose');
@@ -236,7 +283,6 @@
         sidebarClose.addEventListener('click', closeSidebar);
         sidebarOverlay.addEventListener('click', closeSidebar);
 
-        // Close sidebar when nav item is clicked on mobile
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 if (window.innerWidth < 768) {
@@ -245,7 +291,6 @@
             });
         });
 
-        // Handle resize
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 768) {
                 closeSidebar();

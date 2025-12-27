@@ -1,7 +1,23 @@
 let REGISTRY_DATA = null;
 const TELEMETRY_REPO = "dreamswag/ci5"; 
 
+// SHARED CONFIG (Matches ci5.network)
+const CONFIG = {
+    clientId: 'Ov23lisWq6nuhqFog2xr', // Shared Ecosystem ID
+    api: {
+        deviceCode: 'https://github.com/login/device/code', // Proxy calls in real deploy, direct here for static
+        pollToken: 'https://github.com/login/oauth/access_token'
+    }
+};
+
+const state = {
+    user: null,
+    accessToken: localStorage.getItem('gh_token'),
+    deviceInterval: null
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
     fetchCorks();
     
     // Search Listener
@@ -9,6 +25,130 @@ document.addEventListener('DOMContentLoaded', () => {
         filterGrid(e.target.value);
     });
 });
+
+// --- AUTHENTICATION LOGIC ---
+
+async function checkAuth() {
+    if (!state.accessToken) {
+        updateAuthUI();
+        return;
+    }
+    
+    try {
+        const res = await fetch('https://api.github.com/user', {
+            headers: { 'Authorization': `Bearer ${state.accessToken}` }
+        });
+        if (res.ok) {
+            state.user = await res.json();
+        } else {
+            logout(); // Token expired
+        }
+    } catch (e) {
+        console.error("Auth check failed", e);
+    }
+    updateAuthUI();
+}
+
+function updateAuthUI() {
+    const guest = document.getElementById('auth-guest');
+    const userDiv = document.getElementById('auth-user');
+    
+    if (state.user) {
+        guest.classList.add('hidden');
+        userDiv.classList.remove('hidden');
+        document.getElementById('sidebar-avatar').src = state.user.avatar_url;
+        document.getElementById('sidebar-username').textContent = state.user.login;
+        
+        // Update Form Badge
+        document.getElementById('form-user-badge').innerHTML = `
+            <img src="${state.user.avatar_url}"> Verified: ${state.user.login}
+        `;
+    } else {
+        guest.classList.remove('hidden');
+        userDiv.classList.add('hidden');
+    }
+}
+
+async function startDeviceAuth() {
+    const overlay = document.getElementById('auth-overlay');
+    const loading = document.getElementById('auth-loading');
+    const codeSec = document.getElementById('auth-code-section');
+    
+    overlay.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    codeSec.classList.add('hidden');
+    
+    try {
+        // NOTE: In a static environment without a CORS proxy, this call to GitHub might fail 
+        // if not proxied. Assuming the user understands the CORS limitation of purely static sites.
+        // For production, use a worker proxy.
+        const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(CONFIG.api.deviceCode), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ client_id: CONFIG.clientId, scope: 'public_repo' })
+        });
+        
+        const data = await res.json();
+        
+        if (data.device_code) {
+            loading.classList.add('hidden');
+            codeSec.classList.remove('hidden');
+            document.getElementById('user-code').textContent = data.user_code;
+            
+            pollForToken(data.device_code, data.interval);
+        } else {
+            throw new Error('No device code');
+        }
+    } catch (e) {
+        console.error(e);
+        // Fallback for demo if CORS fails
+        alert("CORS Error: Static sites cannot hit GitHub Auth directly without a proxy. \n\nCheck console for details.");
+        closeAuthModal();
+    }
+}
+
+function pollForToken(deviceCode, interval) {
+    if (state.deviceInterval) clearInterval(state.deviceInterval);
+    
+    state.deviceInterval = setInterval(async () => {
+        try {
+            const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(CONFIG.api.pollToken), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    client_id: CONFIG.clientId,
+                    device_code: deviceCode,
+                    grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.access_token) {
+                clearInterval(state.deviceInterval);
+                state.accessToken = data.access_token;
+                localStorage.setItem('gh_token', data.access_token);
+                closeAuthModal();
+                checkAuth();
+            }
+        } catch (e) { console.error(e); }
+    }, (interval + 1) * 1000);
+}
+
+function closeAuthModal() {
+    document.getElementById('auth-overlay').classList.add('hidden');
+    if (state.deviceInterval) clearInterval(state.deviceInterval);
+}
+
+function logout() {
+    state.user = null;
+    state.accessToken = null;
+    localStorage.removeItem('gh_token');
+    updateAuthUI();
+    switchView('official'); // Kick out of submit view
+}
+
+// --- DATA LOGIC ---
 
 async function fetchCorks() {
     try {
@@ -32,6 +172,14 @@ async function fetchCorks() {
 
 // VIEW CONTROLLER
 function switchView(viewName, element) {
+    // STRICT LOCK: Submission requires Auth
+    if (viewName === 'submit') {
+        if (!state.user) {
+            startDeviceAuth();
+            return;
+        }
+    }
+
     const browser = document.getElementById('browser-view');
     const submission = document.getElementById('submission-view');
     const header = document.getElementById('section-header');
@@ -73,7 +221,6 @@ function switchView(viewName, element) {
 }
 
 function getSubmitterFromRepo(repoPath) {
-    // Extract username from repo path like "dreamswag/cork-adguard" or "community/cork-tor-relay"
     if (!repoPath) return 'unknown';
     const parts = repoPath.split('/');
     return parts[0] || 'unknown';
@@ -209,18 +356,33 @@ function setupTelemetryButton(corkID, issueUrl, exists) {
     const btn = document.getElementById('telemetry-action-btn');
     const ramInput = document.getElementById('vote-ram');
     const statusInput = document.getElementById('vote-status');
+    const inputs = document.querySelector('.vote-inputs');
+
+    // STRICT LOCK: Vote Button Logic
+    if (!state.user) {
+        btn.innerText = "LOGIN TO VOTE";
+        btn.className = "vote-btn locked";
+        inputs.style.opacity = "0.5";
+        inputs.style.pointerEvents = "none";
+        btn.onclick = () => startDeviceAuth();
+        return;
+    }
+
+    inputs.style.opacity = "1";
+    inputs.style.pointerEvents = "auto";
+    btn.className = "vote-btn";
 
     if (exists) {
         btn.innerText = "TRANSMIT DATA";
         btn.onclick = () => {
-            const body = `[TELEMETRY] RAM:${ramInput.value} STATUS:${statusInput.value}`;
+            const body = `[TELEMETRY] RAM:${ramInput.value} STATUS:${statusInput.value} \n\nVerified by Ci5-ASH: ${state.user.login}`;
             window.open(`${issueUrl}#new_comment_field?body=${encodeURIComponent(body)}`, '_blank');
         };
     } else {
         btn.innerText = "INITIALIZE THREAD";
         btn.onclick = () => {
             const title = `TELEMETRY: ${corkID}`;
-            const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:CORK\``;
+            const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:CORK\`\n\nInitiated by Verified Pilot: ${state.user.login}`;
             window.open(`https://github.com/${TELEMETRY_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
         };
     }
@@ -248,6 +410,9 @@ function copyCmd(el) {
 }
 
 function generateSubmission() {
+    // Redundant Auth Check
+    if (!state.user) { startDeviceAuth(); return; }
+
     const name = document.getElementById('sub-name').value;
     const repo = document.getElementById('sub-repo').value;
     const desc = document.getElementById('sub-desc').value;
@@ -268,7 +433,7 @@ function generateSubmission() {
     }`;
 
     const title = `New Cork: ${name}`;
-    const body = `Please add this Cork to the registry:\n\n\`\`\`json${json}\n\`\`\``;
+    const body = `Please add this Cork to the registry:\n\n\`\`\`json${json}\n\`\`\`\n\n**Submitted by Verified Pilot:** @${state.user.login}`;
     
     window.open(`https://github.com/dreamswag/ci5.dev/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
 }
