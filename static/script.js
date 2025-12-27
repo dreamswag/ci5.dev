@@ -8,6 +8,8 @@
  * - Submit corks (requires hardware verification)
  * - GitHub OAuth Device Flow
  * - Hardware challenge-response verification
+ * 
+ * Session Duration: π hours (3.14159... hours ≈ 3h 8m 30s)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -16,8 +18,11 @@
 
 const CI5_API = 'https://api.ci5.network';
 
+const PI_HOURS_MS = Math.PI * 60 * 60 * 1000; 
+
 const CONFIG = {
-    clientId: 'Ov23liSwq6nuhqFog2xr',  
+    clientId: 'Ov23liSwq6nuhqFog2xr',
+    sessionTTL: PI_HOURS_MS,
     api: {
         deviceCode: 'https://github.com/login/device/code',
         pollToken: 'https://github.com/login/oauth/access_token'
@@ -29,6 +34,7 @@ const CONFIG = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 let REGISTRY_DATA = null;
+let currentCorkKey = null;  // Track which cork is open in modal
 
 const state = {
     user: null,
@@ -39,7 +45,8 @@ const state = {
     sessionId: localStorage.getItem('ci5_session') || crypto.randomUUID(),
     hwVerified: false,
     hwid: null,
-    pendingAction: null
+    pendingAction: null,
+    verificationPollInterval: null
 };
 
 // Persist session ID
@@ -50,7 +57,7 @@ localStorage.setItem('ci5_session', state.sessionId);
 // ═══════════════════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-    injectModalHTML();
+    injectHardwareModal();
     checkAuth();
     checkHardwareVerification();
     fetchCorks();
@@ -63,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HARDWARE VERIFICATION
+// HARDWARE VERIFICATION (π-hour sessions)
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -78,6 +85,7 @@ async function checkHardwareVerification() {
             state.hwVerified = true;
             state.hwid = data.hwid;
             updateVerificationUI();
+            console.log(`🔒 Hardware verified: ${state.hwid.substring(0, 8)}...`);
         }
     } catch (e) {
         console.warn('Hardware verification check failed:', e);
@@ -92,14 +100,14 @@ async function requestHardwareVerification() {
     const challenge = 'ci5_' + Math.random().toString(36).substring(2, 8);
     
     try {
-        // Register challenge with backend
+        // Register challenge with backend (5 minute expiry for challenge itself)
         const res = await fetch(`${CI5_API}/v1/challenge/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challenge,
                 session_id: state.sessionId,
-                expires: Date.now() + 300000  // 5 minutes
+                expires: Date.now() + 300000  // 5 min to enter challenge
             })
         });
         
@@ -107,7 +115,7 @@ async function requestHardwareVerification() {
             throw new Error('Failed to create challenge');
         }
         
-        showVerificationModal(challenge);
+        showHardwareModal(challenge);
         pollForVerification();
         
     } catch (e) {
@@ -117,11 +125,11 @@ async function requestHardwareVerification() {
 }
 
 /**
- * Show the verification modal with challenge command
+ * Show the hardware verification modal
  */
-function showVerificationModal(challenge) {
+function showHardwareModal(challenge) {
     const modal = document.getElementById('hw-verify-modal');
-    const cmdSpan = document.getElementById('verify-command');
+    const cmdSpan = document.getElementById('hw-verify-command');
     
     if (modal && cmdSpan) {
         cmdSpan.textContent = `ci5 verify ${challenge}`;
@@ -130,29 +138,67 @@ function showVerificationModal(challenge) {
 }
 
 /**
+ * Hide the hardware verification modal
+ */
+function closeHardwareModal() {
+    const modal = document.getElementById('hw-verify-modal');
+    if (modal) modal.classList.add('hidden');
+    
+    // Clear polling
+    if (state.verificationPollInterval) {
+        clearInterval(state.verificationPollInterval);
+        state.verificationPollInterval = null;
+    }
+    
+    state.pendingAction = null;
+}
+
+/**
+ * Copy verification command to clipboard
+ */
+function copyHardwareCommand() {
+    const cmd = document.getElementById('hw-verify-command');
+    if (cmd) {
+        navigator.clipboard.writeText(cmd.textContent);
+        cmd.style.color = '#fff';
+        cmd.style.background = '#1a1a1a';
+        setTimeout(() => {
+            cmd.style.color = '#30d158';
+            cmd.style.background = '#000';
+        }, 1000);
+    }
+}
+
+/**
  * Poll backend for verification completion
  */
 function pollForVerification() {
-    const interval = setInterval(async () => {
+    // Clear any existing poll
+    if (state.verificationPollInterval) {
+        clearInterval(state.verificationPollInterval);
+    }
+    
+    state.verificationPollInterval = setInterval(async () => {
         try {
             const res = await fetch(`${CI5_API}/v1/identity/check?session=${state.sessionId}`);
             const data = await res.json();
             
             if (data.verified) {
-                clearInterval(interval);
+                clearInterval(state.verificationPollInterval);
+                state.verificationPollInterval = null;
+                
                 state.hwVerified = true;
                 state.hwid = data.hwid;
                 
                 // Hide modal
-                const modal = document.getElementById('hw-verify-modal');
-                if (modal) modal.classList.add('hidden');
-                
+                closeHardwareModal();
                 updateVerificationUI();
                 
                 // Execute pending action
                 if (state.pendingAction) {
-                    state.pendingAction();
+                    const action = state.pendingAction;
                     state.pendingAction = null;
+                    action();
                 }
             }
         } catch (e) {
@@ -161,24 +207,29 @@ function pollForVerification() {
     }, 2000);
     
     // Timeout after 5 minutes
-    setTimeout(() => clearInterval(interval), 300000);
+    setTimeout(() => {
+        if (state.verificationPollInterval) {
+            clearInterval(state.verificationPollInterval);
+            state.verificationPollInterval = null;
+        }
+    }, 300000);
 }
 
 /**
  * Update UI to show verification status
  */
 function updateVerificationUI() {
-    // Update user badge if exists
+    // Update submission form badge
     const badge = document.getElementById('form-user-badge');
-    if (badge && state.hwVerified && !badge.innerHTML.includes('HARDWARE VERIFIED')) {
-        badge.innerHTML += ` <span class="hw-badge">🔒 HARDWARE VERIFIED</span>`;
+    if (badge && state.user) {
+        const hwStatus = state.hwVerified 
+            ? `<span class="hw-verified-badge">🔒 VERIFIED</span>`
+            : `<span class="hw-unverified-badge">⚠️ UNVERIFIED</span>`;
+        badge.innerHTML = `<img src="${state.user.avatar_url}" alt="" class="badge-avatar"> ${state.user.login} ${hwStatus}`;
     }
     
-    // Enable any disabled buttons
-    document.querySelectorAll('.requires-hw').forEach(el => {
-        el.classList.remove('disabled');
-        el.removeAttribute('disabled');
-    });
+    // Update telemetry button in cork modal
+    updateTelemetryButton();
 }
 
 /**
@@ -205,40 +256,43 @@ function requireHardware(action) {
 /**
  * Inject the hardware verification modal HTML
  */
-function injectModalHTML() {
+function injectHardwareModal() {
     if (document.getElementById('hw-verify-modal')) return;
     
     const div = document.createElement('div');
     div.id = 'hw-verify-modal';
     div.className = 'modal-overlay hidden';
+    div.onclick = (e) => { if (e.target.id === 'hw-verify-modal') closeHardwareModal(); };
     div.innerHTML = `
-        <div class="modal-card" style="text-align:center; max-width:400px; margin:auto; padding:30px;">
-            <h2 style="margin-top:0;">🔒 Hardware Verification Required</h2>
-            <p style="color:#888;">This action requires a verified Ci5 device.</p>
-            <p style="color:#888; font-size:0.9em;">Run this command on your Pi:</p>
-            <div style="background:#000; padding:15px; margin:20px 0; border-radius:8px; font-family:'JetBrains Mono', monospace; color:#30d158; font-size:1.1em; cursor:pointer;" onclick="copyVerifyCommand()">
-                <span id="verify-command">Loading...</span>
+        <div class="modal-window" style="max-width:420px;">
+            <div class="modal-header">
+                <div class="app-icon large">🔒</div>
+                <div class="modal-title-group">
+                    <h2>Hardware Verification</h2>
+                    <span class="signer-tag" style="color:#ff9f0a; border-color:#ff9f0a;">CI5-ASH REQUIRED</span>
+                </div>
+                <button class="close-btn" onclick="closeHardwareModal()">×</button>
             </div>
-            <p style="color:#666; font-size:0.8em;">Click command to copy • Waiting for verification...</p>
-            <button onclick="closeVerifyModal()" style="margin-top:15px; padding:10px 20px; background:#333; border:none; color:#fff; border-radius:6px; cursor:pointer;">Cancel</button>
+            <div class="modal-body" style="text-align:center;">
+                <p class="desc-text">This action requires a verified Ci5 device.</p>
+                <p class="desc-text" style="font-size:0.9em; color:#666;">Run this command on your Pi:</p>
+                
+                <div class="install-box" style="cursor:pointer;" onclick="copyHardwareCommand()">
+                    <div class="install-label">VERIFICATION COMMAND</div>
+                    <code id="hw-verify-command" style="font-size:1.1em;">ci5 verify ...</code>
+                </div>
+                
+                <div class="auth-status" style="margin-top:20px;">
+                    <span class="spinner-small"></span> Waiting for verification...
+                </div>
+                
+                <p class="desc-text" style="font-size:0.8em; color:#555; margin-top:15px;">
+                    Session valid for π hours (~3h 8m) after verification
+                </p>
+            </div>
         </div>
     `;
     document.body.appendChild(div);
-}
-
-function copyVerifyCommand() {
-    const cmd = document.getElementById('verify-command');
-    if (cmd) {
-        navigator.clipboard.writeText(cmd.textContent);
-        cmd.style.color = '#fff';
-        setTimeout(() => cmd.style.color = '#30d158', 1000);
-    }
-}
-
-function closeVerifyModal() {
-    const modal = document.getElementById('hw-verify-modal');
-    if (modal) modal.classList.add('hidden');
-    state.pendingAction = null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -278,11 +332,9 @@ function updateAuthUI() {
         
         const avatar = document.getElementById('sidebar-avatar');
         const username = document.getElementById('sidebar-username');
-        const badge = document.getElementById('form-user-badge');
         
         if (avatar) avatar.src = state.user.avatar_url;
         if (username) username.textContent = state.user.login;
-        if (badge) badge.innerHTML = `<img src="${state.user.avatar_url}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle;margin-right:8px;"> Registry Signer: ${state.user.login}`;
         
         updateVerificationUI();
     } else {
@@ -402,7 +454,7 @@ async function fetchCorks() {
         
         const signerDisplay = document.getElementById('signer-display');
         if (signerDisplay && REGISTRY_DATA.meta) {
-            signerDisplay.textContent = `MAINTAINER: ${REGISTRY_DATA.meta.signing_authority}`;
+            signerDisplay.textContent = `AUTH: ${REGISTRY_DATA.meta.signing_authority}`;
         }
         
         switchView('official');
@@ -478,6 +530,10 @@ function renderRows(corksObj, isOfficial) {
         let statusDot = '<span class="status-dot dot-unknown"></span>';
         if (cork.audit?.audit_result === 'SAFE') {
             statusDot = '<span class="status-dot dot-safe"></span>';
+        } else if (cork.audit?.audit_result === 'SUSPICIOUS') {
+            statusDot = '<span class="status-dot dot-warn"></span>';
+        } else if (cork.audit?.audit_result === 'MALICIOUS') {
+            statusDot = '<span class="status-dot dot-danger"></span>';
         }
         
         const submitter = cork.repo ? cork.repo.split('/')[0] : 'unknown';
@@ -486,7 +542,7 @@ function renderRows(corksObj, isOfficial) {
             <div class="app-icon">${getIconFor(key)}</div>
             <div class="app-details">
                 <div class="app-name">${key}</div>
-                <div class="app-cat">${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}</div>
+                <div class="app-cat">${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Signed' : 'Community'}</div>
                 <div class="app-submitter">by ${submitter}</div>
             </div>
             <button class="get-btn">VIEW</button>
@@ -498,6 +554,8 @@ function renderRows(corksObj, isOfficial) {
 function openDetail(key, type) {
     const cork = REGISTRY_DATA?.official?.[key] || REGISTRY_DATA?.community?.[key];
     if (!cork) return;
+    
+    currentCorkKey = key;  // Track current cork
     
     const modalTitle = document.getElementById('modal-title');
     const modalDesc = document.getElementById('modal-desc');
@@ -522,14 +580,65 @@ function openDetail(key, type) {
         modalTag.style.borderColor = type === 'official' ? '#30d158' : '#ff9f0a';
     }
     
+    // Update telemetry section
+    updateTelemetryButton();
+    loadCommunitySignal(key);
+    
     toggleModal(true);
+}
+
+/**
+ * Update the telemetry action button based on auth/verification state
+ */
+function updateTelemetryButton() {
+    const btn = document.getElementById('telemetry-action-btn');
+    if (!btn) return;
+    
+    if (!state.user) {
+        btn.textContent = '🔑 LOGIN TO VOTE';
+        btn.onclick = startDeviceAuth;
+        btn.className = 'vote-btn disabled';
+    } else if (!state.hwVerified) {
+        btn.textContent = '🔒 VERIFY HARDWARE';
+        btn.onclick = () => requireHardware(() => {});
+        btn.className = 'vote-btn warning';
+    } else {
+        btn.textContent = '📡 SUBMIT SIGNAL';
+        btn.onclick = submitVote;
+        btn.className = 'vote-btn';
+    }
+}
+
+/**
+ * Load community signal data for a cork
+ */
+async function loadCommunitySignal(corkKey) {
+    const box = document.getElementById('community-ram-box');
+    if (!box) return;
+    
+    // Placeholder - in production, fetch from API
+    box.innerHTML = `
+        <div class="stat-label">COMMUNITY AVG RAM</div>
+        <div class="stat-val">—</div>
+        <div class="stat-sub">No votes yet</div>
+    `;
+    
+    // TODO: Fetch actual telemetry from API
+    // try {
+    //     const res = await fetch(`${CI5_API}/v1/telemetry/${corkKey}`);
+    //     const data = await res.json();
+    //     ...
+    // } catch (e) {}
 }
 
 function toggleModal(show) {
     const el = document.getElementById('modal-overlay');
     if (el) {
         if (show) el.classList.remove('hidden');
-        else el.classList.add('hidden');
+        else {
+            el.classList.add('hidden');
+            currentCorkKey = null;
+        }
     }
 }
 
@@ -548,14 +657,18 @@ function copyCmd(el) {
     }, 1500);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// HARDWARE-GATED ACTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Generate cork submission — REQUIRES HARDWARE VERIFICATION
  */
 function generateSubmission() {
     requireHardware(() => {
-        const name = document.getElementById('sub-name')?.value;
-        const repo = document.getElementById('sub-repo')?.value;
-        const desc = document.getElementById('sub-desc')?.value;
+        const name = document.getElementById('sub-name')?.value?.trim();
+        const repo = document.getElementById('sub-repo')?.value?.trim();
+        const desc = document.getElementById('sub-desc')?.value?.trim();
         const ram = document.getElementById('sub-ram')?.value;
         
         if (!name || !repo) {
@@ -563,22 +676,41 @@ function generateSubmission() {
             return;
         }
         
-        const json = `"${name}": { "repo": "${repo.replace('https://github.com/', '')}", "desc": "${desc}", "ram": "${ram}", "submitter_hwid": "${state.hwid?.substring(0, 8) || 'unverified'}", "signature": null, "audit": null }`;
+        const repoPath = repo.replace('https://github.com/', '').replace(/\/$/, '');
+        const hwidShort = state.hwid?.substring(0, 8) || 'unknown';
         
-        const title = `New Cork: ${name}`;
-        const body = `Please add this Cork to the registry.
+        const json = `"${name}": {
+  "repo": "${repoPath}",
+  "desc": "${desc || 'No description'}",
+  "ram": "${ram}",
+  "submitter_hwid": "${hwidShort}",
+  "signature": null,
+  "audit": null
+}`;
+        
+        const title = `[Cork Submission] ${name}`;
+        const body = `## New Cork Submission
 
+### Registry Entry
 \`\`\`json
 ${json}
 \`\`\`
 
-**Submitted by:** @${state.user.login}
-**Hardware Verified:** ${state.hwVerified ? `Yes (${state.hwid?.substring(0, 8)}...)` : 'No'}
+### Submitter Info
+- **GitHub:** @${state.user.login}
+- **Hardware ID:** \`${hwidShort}...\` (verified)
+- **Submitted:** ${new Date().toISOString()}
+
+### Checklist
+- [ ] Cork builds successfully
+- [ ] Tested on Pi 5 with Ci5
+- [ ] No malicious code
+- [ ] Accurate RAM estimate
 
 ---
-*I confirm this submission is for a valid Ci5-tested container.*`;
+*Submitted via ci5.dev with hardware verification*`;
         
-        window.open(`https://github.com/dreamswag/ci5.dev/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
+        window.open(`https://github.com/dreamswag/ci5.dev/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=cork-submission`, '_blank');
     });
 }
 
@@ -589,25 +721,75 @@ function submitVote() {
     requireHardware(async () => {
         const ram = document.getElementById('vote-ram')?.value;
         const status = document.getElementById('vote-status')?.value;
-        const corkName = document.getElementById('modal-title')?.textContent;
+        const corkName = currentCorkKey || document.getElementById('modal-title')?.textContent;
         
-        // In a real implementation, this would POST to your API
-        console.log('Vote submitted:', { cork: corkName, ram, status, hwid: state.hwid });
-        alert(`Vote recorded for ${corkName}!\n\nRAM: ${ram}MB\nStatus: ${status}\nHWID: ${state.hwid?.substring(0, 8)}...`);
+        if (!corkName) {
+            alert('No cork selected.');
+            return;
+        }
+        
+        const voteData = {
+            cork: corkName,
+            ram_mb: parseInt(ram),
+            status: status,
+            hwid: state.hwid,
+            github: state.user.login,
+            timestamp: Date.now()
+        };
+        
+        console.log('📡 Vote submitted:', voteData);
+        
+        // TODO: POST to actual API
+        // try {
+        //     const res = await fetch(`${CI5_API}/v1/telemetry/vote`, {
+        //         method: 'POST',
+        //         headers: { 'Content-Type': 'application/json' },
+        //         body: JSON.stringify(voteData)
+        //     });
+        //     if (!res.ok) throw new Error('Vote failed');
+        // } catch (e) {
+        //     alert('Failed to submit vote.');
+        //     return;
+        // }
+        
+        // Show success feedback
+        const btn = document.getElementById('telemetry-action-btn');
+        if (btn) {
+            btn.textContent = '✓ SIGNAL SENT';
+            btn.className = 'vote-btn success';
+            setTimeout(() => updateTelemetryButton(), 2000);
+        }
+        
+        alert(`Signal recorded for ${corkName}!\n\nRAM: ${ram}MB\nStatus: ${status}\nHWID: ${state.hwid?.substring(0, 8)}...`);
     });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
 function getIconFor(name) {
-    if (name.includes('adguard')) return '🛡️';
-    if (name.includes('unbound')) return '🌐';
-    if (name.includes('suricata')) return '👁️';
-    if (name.includes('minecraft')) return '⛏️';
-    if (name.includes('tor')) return '🧅';
-    if (name.includes('bitcoin')) return '₿';
-    if (name.includes('ntop')) return '📊';
-    if (name.includes('pihole')) return '🕳️';
-    if (name.includes('wireguard')) return '🔐';
-    if (name.includes('nginx')) return '🌐';
+    const icons = {
+        'adguard': '🛡️',
+        'unbound': '🌐',
+        'suricata': '👁️',
+        'crowdsec': '🤖',
+        'minecraft': '⛏️',
+        'tor': '🧅',
+        'bitcoin': '₿',
+        'ethereum': 'Ξ',
+        'monero': '🔒',
+        'ntop': '📊',
+        'pihole': '🕳️',
+        'wireguard': '🔐',
+        'nginx': '🌐',
+        'home-assistant': '🏠',
+        'paper': '📄'
+    };
+    
+    for (const [key, icon] of Object.entries(icons)) {
+        if (name.toLowerCase().includes(key)) return icon;
+    }
     return '📦';
 }
 
@@ -618,14 +800,22 @@ function filterGrid(query) {
     }
     
     const grid = document.getElementById('main-grid');
+    const header = document.getElementById('section-header');
+    const hero = document.getElementById('hero-card');
+    
     if (!grid || !REGISTRY_DATA) return;
+    
+    if (header) header.textContent = `🔍 Search: "${query}"`;
+    if (hero) hero.classList.add('hidden');
     
     grid.innerHTML = '';
     const all = { ...REGISTRY_DATA.official, ...REGISTRY_DATA.community };
     
+    let count = 0;
     Object.entries(all).forEach(([k, v]) => {
         if (k.toLowerCase().includes(query.toLowerCase()) || 
             v.desc?.toLowerCase().includes(query.toLowerCase())) {
+            count++;
             const isOfficial = !!REGISTRY_DATA.official[k];
             const el = document.createElement('div');
             el.className = 'app-row';
@@ -636,7 +826,7 @@ function filterGrid(query) {
                 <div class="app-icon">${getIconFor(k)}</div>
                 <div class="app-details">
                     <div class="app-name">${k}</div>
-                    <div class="app-cat">${v.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}</div>
+                    <div class="app-cat">${v.ram || 'RAM?'} • ${isOfficial ? 'Signed' : 'Community'}</div>
                     <div class="app-submitter">by ${submitter}</div>
                 </div>
                 <button class="get-btn">VIEW</button>
@@ -644,4 +834,8 @@ function filterGrid(query) {
             grid.appendChild(el);
         }
     });
+    
+    if (count === 0) {
+        grid.innerHTML = '<div class="no-results">No corks found matching your search.</div>';
+    }
 }
