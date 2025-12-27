@@ -1,5 +1,6 @@
 let REGISTRY_DATA = null;
 const TELEMETRY_REPO = "dreamswag/ci5"; 
+const CI5_API = 'https://api.ci5.network';
 
 // SHARED CONFIG (Matches ci5.network)
 const CONFIG = {
@@ -13,18 +14,140 @@ const CONFIG = {
 const state = {
     user: null,
     accessToken: localStorage.getItem('gh_token'),
-    deviceInterval: null
+    deviceInterval: null,
+    sessionId: localStorage.getItem('ci5_session') || crypto.randomUUID(),
+    hwVerified: false,
+    hwid: null,
+    pendingAction: null
 };
 
+// Persist session ID
+localStorage.setItem('ci5_session', state.sessionId);
+
 document.addEventListener('DOMContentLoaded', () => {
+    injectModalHTML(); // Ensure modal exists
     checkAuth();
-    fetchCorks();
+    checkHardwareVerification(); // Check if already verified
+    fetchCorks(); // Always fetch corks (Open Access)
     
     // Search Listener
     document.getElementById('search-box').addEventListener('input', (e) => {
         filterGrid(e.target.value);
     });
 });
+
+// --- HARDWARE VERIFICATION LOGIC ---
+
+async function checkHardwareVerification() {
+    try {
+        const res = await fetch(`${CI5_API}/v1/identity/check?session=${state.sessionId}`);
+        const data = await res.json();
+        
+        if (data.verified) {
+            state.hwVerified = true;
+            state.hwid = data.hwid;
+            updateVerificationUI();
+        }
+    } catch (e) {
+        console.warn('Hardware check failed:', e);
+    }
+}
+
+async function requestHardwareVerification() {
+    // Generate challenge
+    const challenge = 'ci5_' + Math.random().toString(36).substring(2, 8);
+    
+    // Register challenge with backend
+    try {
+        await fetch(`${CI5_API}/v1/challenge/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challenge,
+                session_id: state.sessionId,
+                expires: Date.now() + 300000 // 5 minutes
+            }),
+        });
+        
+        showVerificationModal(challenge);
+        pollForVerification();
+    } catch (e) {
+        console.error("Failed to init verification", e);
+        alert("Backend offline. Cannot verify hardware.");
+    }
+}
+
+function showVerificationModal(challenge) {
+    const modal = document.getElementById('hw-verify-modal');
+    document.getElementById('verify-command').textContent = `ci5 verify ${challenge}`;
+    modal.classList.remove('hidden');
+}
+
+function pollForVerification() {
+    const interval = setInterval(async () => {
+        const res = await fetch(`${CI5_API}/v1/identity/check?session=${state.sessionId}`);
+        const data = await res.json();
+        
+        if (data.verified) {
+            clearInterval(interval);
+            state.hwVerified = true;
+            state.hwid = data.hwid;
+            
+            document.getElementById('hw-verify-modal').classList.add('hidden');
+            updateVerificationUI();
+            
+            // Continue with original action
+            if (state.pendingAction) {
+                state.pendingAction();
+                state.pendingAction = null;
+            }
+        }
+    }, 2000);
+    
+    // Timeout after 5 minutes
+    setTimeout(() => clearInterval(interval), 300000);
+}
+
+function updateVerificationUI() {
+    const badge = document.getElementById('form-user-badge');
+    if (state.hwVerified && badge) {
+        // Avoid duplicate badges
+        if (!badge.innerHTML.includes('HARDWARE VERIFIED')) {
+            badge.innerHTML += ` <span style="color:#30d158; border:1px solid #30d158; padding:2px 5px; border-radius:4px; font-size:0.8em;">HARDWARE VERIFIED</span>`;
+        }
+    }
+}
+
+function requireHardware(action) {
+    if (!state.user) {
+        startDeviceAuth();
+        return;
+    }
+    if (state.hwVerified) {
+        action();
+    } else {
+        state.pendingAction = action;
+        requestHardwareVerification();
+    }
+}
+
+function injectModalHTML() {
+    if (document.getElementById('hw-verify-modal')) return;
+    const div = document.createElement('div');
+    div.id = 'hw-verify-modal';
+    div.className = 'modal-overlay hidden';
+    div.innerHTML = `
+        <div class="modal-card" style="text-align:center">
+            <h2>🔒 Verified Hardware Required</h2>
+            <p>This action requires a verified Ci5 device.</p>
+            <div style="background:#000; padding:15px; margin:20px 0; border-radius:8px; font-family:monospace; color:#30d158; font-size:1.2em;">
+                <span id="verify-command">Loading...</span>
+            </div>
+            <p style="color:#888; font-size:0.9em;">Run this command on your Pi to verify this session.</p>
+        </div>
+    `;
+    document.body.appendChild(div);
+}
 
 // --- AUTHENTICATION LOGIC ---
 
@@ -59,10 +182,10 @@ function updateAuthUI() {
         document.getElementById('sidebar-avatar').src = state.user.avatar_url;
         document.getElementById('sidebar-username').textContent = state.user.login;
         
-        // Update Form Badge
         document.getElementById('form-user-badge').innerHTML = `
             <img src="${state.user.avatar_url}"> Verified: ${state.user.login}
         `;
+        updateVerificationUI();
     } else {
         guest.classList.remove('hidden');
         userDiv.classList.add('hidden');
@@ -172,14 +295,32 @@ async function fetchCorks() {
 
 // VIEW CONTROLLER
 function switchView(viewName, element) {
-    // STRICT LOCK: Submission requires Auth
+    // STRICT LOCK: Submission requires Hardware Verification
     if (viewName === 'submit') {
-        if (!state.user) {
-            startDeviceAuth();
-            return;
-        }
+        requireHardware(() => {
+            showSubmissionView(element);
+        });
+        return;
     }
 
+    // Normal view switching
+    showView(viewName, element);
+}
+
+function showSubmissionView(element) {
+    const browser = document.getElementById('browser-view');
+    const submission = document.getElementById('submission-view');
+    
+    if (element) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+    }
+    
+    browser.classList.add('hidden');
+    submission.classList.remove('hidden');
+}
+
+function showView(viewName, element) {
     const browser = document.getElementById('browser-view');
     const submission = document.getElementById('submission-view');
     const header = document.getElementById('section-header');
@@ -192,16 +333,9 @@ function switchView(viewName, element) {
     }
     
     // Hide All Views
-    browser.classList.add('hidden');
+    browser.classList.remove('hidden');
     submission.classList.add('hidden');
 
-    if (viewName === 'submit') {
-        submission.classList.remove('hidden');
-        return;
-    }
-
-    // Browser Mode
-    browser.classList.remove('hidden');
     const grid = document.getElementById('main-grid');
     grid.innerHTML = '';
 
@@ -358,16 +492,7 @@ function setupTelemetryButton(corkID, issueUrl, exists) {
     const statusInput = document.getElementById('vote-status');
     const inputs = document.querySelector('.vote-inputs');
 
-    // STRICT LOCK: Vote Button Logic
-    if (!state.user) {
-        btn.innerText = "LOGIN TO VOTE";
-        btn.className = "vote-btn locked";
-        inputs.style.opacity = "0.5";
-        inputs.style.pointerEvents = "none";
-        btn.onclick = () => startDeviceAuth();
-        return;
-    }
-
+    // Action is gated by Hardware Verification
     inputs.style.opacity = "1";
     inputs.style.pointerEvents = "auto";
     btn.className = "vote-btn";
@@ -375,15 +500,19 @@ function setupTelemetryButton(corkID, issueUrl, exists) {
     if (exists) {
         btn.innerText = "TRANSMIT DATA";
         btn.onclick = () => {
-            const body = `[TELEMETRY] RAM:${ramInput.value} STATUS:${statusInput.value} \n\nVerified by Ci5-ASH: ${state.user.login}`;
-            window.open(`${issueUrl}#new_comment_field?body=${encodeURIComponent(body)}`, '_blank');
+            requireHardware(() => {
+                const body = `[TELEMETRY] RAM:${ramInput.value} STATUS:${statusInput.value} \n\nVerified by Ci5-HWID: ${state.hwid.substring(0,8)}`;
+                window.open(`${issueUrl}#new_comment_field?body=${encodeURIComponent(body)}`, '_blank');
+            });
         };
     } else {
         btn.innerText = "INITIALIZE THREAD";
         btn.onclick = () => {
-            const title = `TELEMETRY: ${corkID}`;
-            const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:CORK\`\n\nInitiated by Verified Pilot: ${state.user.login}`;
-            window.open(`https://github.com/${TELEMETRY_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
+            requireHardware(() => {
+                const title = `TELEMETRY: ${corkID}`;
+                const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:CORK\`\n\nInitiated by Verified Pilot: ${state.user.login}`;
+                window.open(`https://github.com/${TELEMETRY_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
+            });
         };
     }
 }
@@ -410,32 +539,31 @@ function copyCmd(el) {
 }
 
 function generateSubmission() {
-    // Redundant Auth Check
-    if (!state.user) { startDeviceAuth(); return; }
+    requireHardware(() => {
+        const name = document.getElementById('sub-name').value;
+        const repo = document.getElementById('sub-repo').value;
+        const desc = document.getElementById('sub-desc').value;
+        const ram = document.getElementById('sub-ram').value;
 
-    const name = document.getElementById('sub-name').value;
-    const repo = document.getElementById('sub-repo').value;
-    const desc = document.getElementById('sub-desc').value;
-    const ram = document.getElementById('sub-ram').value;
+        if(!name || !repo) {
+            alert("Name and Repo are required.");
+            return;
+        }
 
-    if(!name || !repo) {
-        alert("Name and Repo are required.");
-        return;
-    }
+        const json = `
+        "${name}": {
+          "repo": "${repo.replace('https://github.com/', '')}",
+          "desc": "${desc}",
+          "ram": "${ram}",
+          "signature": null,
+          "audit": null
+        }`;
 
-    const json = `
-    "${name}": {
-      "repo": "${repo.replace('https://github.com/', '')}",
-      "desc": "${desc}",
-      "ram": "${ram}",
-      "signature": null,
-      "audit": null
-    }`;
-
-    const title = `New Cork: ${name}`;
-    const body = `Please add this Cork to the registry:\n\n\`\`\`json${json}\n\`\`\`\n\n**Submitted by Verified Pilot:** @${state.user.login}`;
-    
-    window.open(`https://github.com/dreamswag/ci5.dev/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
+        const title = `New Cork: ${name}`;
+        const body = `Please add this Cork to the registry:\n\n\`\`\`json${json}\n\`\`\`\n\n**Submitted by Verified Pilot:** @${state.user.login}\n**Hardware ID:** ${state.hwid}`;
+        
+        window.open(`https://github.com/dreamswag/ci5.dev/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
+    });
 }
 
 function getIconFor(name) {
