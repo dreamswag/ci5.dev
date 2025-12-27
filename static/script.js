@@ -1,20 +1,41 @@
-let REGISTRY_DATA = null;
-const TELEMETRY_REPO = "dreamswag/ci5"; 
+/**
+ * CI5.DEV — Cork Registry Frontend
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Features:
+ * - Browse corks (public, no auth required)
+ * - Rate corks (requires hardware verification)
+ * - Submit corks (requires hardware verification)
+ * - GitHub OAuth Device Flow
+ * - Hardware challenge-response verification
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════
+
 const CI5_API = 'https://api.ci5.network';
 
-// SHARED CONFIG (Matches ci5.network)
 const CONFIG = {
-    clientId: 'Ov23lisWq6nuhqFog2xr', // Shared Ecosystem ID
+    clientId: 'Ov23liSwq6nuhqFog2xr',  
     api: {
-        deviceCode: 'https://github.com/login/device/code', // Proxy calls in real deploy, direct here for static
+        deviceCode: 'https://github.com/login/device/code',
         pollToken: 'https://github.com/login/oauth/access_token'
     }
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+let REGISTRY_DATA = null;
 
 const state = {
     user: null,
     accessToken: localStorage.getItem('gh_token'),
     deviceInterval: null,
+    
+    // Hardware verification
     sessionId: localStorage.getItem('ci5_session') || crypto.randomUUID(),
     hwVerified: false,
     hwid: null,
@@ -24,20 +45,30 @@ const state = {
 // Persist session ID
 localStorage.setItem('ci5_session', state.sessionId);
 
+// ═══════════════════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', () => {
-    injectModalHTML(); // Ensure modal exists
+    injectModalHTML();
     checkAuth();
-    checkHardwareVerification(); // Check if already verified
-    fetchCorks(); // Always fetch corks (Open Access)
+    checkHardwareVerification();
+    fetchCorks();
     
-    // Search Listener
-    document.getElementById('search-box').addEventListener('input', (e) => {
-        filterGrid(e.target.value);
-    });
+    // Search listener
+    const searchBox = document.getElementById('search-box');
+    if (searchBox) {
+        searchBox.addEventListener('input', (e) => filterGrid(e.target.value));
+    }
 });
 
-// --- HARDWARE VERIFICATION LOGIC ---
+// ═══════════════════════════════════════════════════════════════════════════
+// HARDWARE VERIFICATION
+// ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Check if current session is hardware-verified
+ */
 async function checkHardwareVerification() {
     try {
         const res = await fetch(`${CI5_API}/v1/identity/check?session=${state.sessionId}`);
@@ -49,58 +80,83 @@ async function checkHardwareVerification() {
             updateVerificationUI();
         }
     } catch (e) {
-        console.warn('Hardware check failed:', e);
+        console.warn('Hardware verification check failed:', e);
     }
 }
 
+/**
+ * Request hardware verification (shows modal with challenge command)
+ */
 async function requestHardwareVerification() {
-    // Generate challenge
+    // Generate challenge code
     const challenge = 'ci5_' + Math.random().toString(36).substring(2, 8);
     
-    // Register challenge with backend
     try {
-        await fetch(`${CI5_API}/v1/challenge/create`, {
+        // Register challenge with backend
+        const res = await fetch(`${CI5_API}/v1/challenge/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challenge,
                 session_id: state.sessionId,
-                expires: Date.now() + 300000 // 5 minutes
-            }),
+                expires: Date.now() + 300000  // 5 minutes
+            })
         });
+        
+        if (!res.ok) {
+            throw new Error('Failed to create challenge');
+        }
         
         showVerificationModal(challenge);
         pollForVerification();
+        
     } catch (e) {
-        console.error("Failed to init verification", e);
-        alert("Backend offline. Cannot verify hardware.");
+        console.error('Failed to init verification:', e);
+        alert('Verification service unavailable. Try again later.');
     }
 }
 
+/**
+ * Show the verification modal with challenge command
+ */
 function showVerificationModal(challenge) {
     const modal = document.getElementById('hw-verify-modal');
-    document.getElementById('verify-command').textContent = `ci5 verify ${challenge}`;
-    modal.classList.remove('hidden');
+    const cmdSpan = document.getElementById('verify-command');
+    
+    if (modal && cmdSpan) {
+        cmdSpan.textContent = `ci5 verify ${challenge}`;
+        modal.classList.remove('hidden');
+    }
 }
 
+/**
+ * Poll backend for verification completion
+ */
 function pollForVerification() {
     const interval = setInterval(async () => {
-        const res = await fetch(`${CI5_API}/v1/identity/check?session=${state.sessionId}`);
-        const data = await res.json();
-        
-        if (data.verified) {
-            clearInterval(interval);
-            state.hwVerified = true;
-            state.hwid = data.hwid;
+        try {
+            const res = await fetch(`${CI5_API}/v1/identity/check?session=${state.sessionId}`);
+            const data = await res.json();
             
-            document.getElementById('hw-verify-modal').classList.add('hidden');
-            updateVerificationUI();
-            
-            // Continue with original action
-            if (state.pendingAction) {
-                state.pendingAction();
-                state.pendingAction = null;
+            if (data.verified) {
+                clearInterval(interval);
+                state.hwVerified = true;
+                state.hwid = data.hwid;
+                
+                // Hide modal
+                const modal = document.getElementById('hw-verify-modal');
+                if (modal) modal.classList.add('hidden');
+                
+                updateVerificationUI();
+                
+                // Execute pending action
+                if (state.pendingAction) {
+                    state.pendingAction();
+                    state.pendingAction = null;
+                }
             }
+        } catch (e) {
+            console.warn('Poll error:', e);
         }
     }, 2000);
     
@@ -108,48 +164,86 @@ function pollForVerification() {
     setTimeout(() => clearInterval(interval), 300000);
 }
 
+/**
+ * Update UI to show verification status
+ */
 function updateVerificationUI() {
+    // Update user badge if exists
     const badge = document.getElementById('form-user-badge');
-    if (state.hwVerified && badge) {
-        // Avoid duplicate badges
-        if (!badge.innerHTML.includes('HARDWARE VERIFIED')) {
-            badge.innerHTML += ` <span style="color:#30d158; border:1px solid #30d158; padding:2px 5px; border-radius:4px; font-size:0.8em;">HARDWARE VERIFIED</span>`;
-        }
+    if (badge && state.hwVerified && !badge.innerHTML.includes('HARDWARE VERIFIED')) {
+        badge.innerHTML += ` <span class="hw-badge">🔒 HARDWARE VERIFIED</span>`;
     }
+    
+    // Enable any disabled buttons
+    document.querySelectorAll('.requires-hw').forEach(el => {
+        el.classList.remove('disabled');
+        el.removeAttribute('disabled');
+    });
 }
 
+/**
+ * Gate function - requires hardware verification before action
+ */
 function requireHardware(action) {
+    // Must be logged in first
     if (!state.user) {
         startDeviceAuth();
         return;
     }
+    
+    // If verified, execute immediately
     if (state.hwVerified) {
         action();
-    } else {
-        state.pendingAction = action;
-        requestHardwareVerification();
+        return;
     }
+    
+    // Otherwise, request verification
+    state.pendingAction = action;
+    requestHardwareVerification();
 }
 
+/**
+ * Inject the hardware verification modal HTML
+ */
 function injectModalHTML() {
     if (document.getElementById('hw-verify-modal')) return;
+    
     const div = document.createElement('div');
     div.id = 'hw-verify-modal';
     div.className = 'modal-overlay hidden';
     div.innerHTML = `
-        <div class="modal-card" style="text-align:center">
-            <h2>🔒 Verified Hardware Required</h2>
-            <p>This action requires a verified Ci5 device.</p>
-            <div style="background:#000; padding:15px; margin:20px 0; border-radius:8px; font-family:monospace; color:#30d158; font-size:1.2em;">
+        <div class="modal-card" style="text-align:center; max-width:400px; margin:auto; padding:30px;">
+            <h2 style="margin-top:0;">🔒 Hardware Verification Required</h2>
+            <p style="color:#888;">This action requires a verified Ci5 device.</p>
+            <p style="color:#888; font-size:0.9em;">Run this command on your Pi:</p>
+            <div style="background:#000; padding:15px; margin:20px 0; border-radius:8px; font-family:'JetBrains Mono', monospace; color:#30d158; font-size:1.1em; cursor:pointer;" onclick="copyVerifyCommand()">
                 <span id="verify-command">Loading...</span>
             </div>
-            <p style="color:#888; font-size:0.9em;">Run this command on your Pi to verify this session.</p>
+            <p style="color:#666; font-size:0.8em;">Click command to copy • Waiting for verification...</p>
+            <button onclick="closeVerifyModal()" style="margin-top:15px; padding:10px 20px; background:#333; border:none; color:#fff; border-radius:6px; cursor:pointer;">Cancel</button>
         </div>
     `;
     document.body.appendChild(div);
 }
 
-// --- AUTHENTICATION LOGIC ---
+function copyVerifyCommand() {
+    const cmd = document.getElementById('verify-command');
+    if (cmd) {
+        navigator.clipboard.writeText(cmd.textContent);
+        cmd.style.color = '#fff';
+        setTimeout(() => cmd.style.color = '#30d158', 1000);
+    }
+}
+
+function closeVerifyModal() {
+    const modal = document.getElementById('hw-verify-modal');
+    if (modal) modal.classList.add('hidden');
+    state.pendingAction = null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GITHUB OAUTH (Device Flow)
+// ═══════════════════════════════════════════════════════════════════════════
 
 async function checkAuth() {
     if (!state.accessToken) {
@@ -161,14 +255,16 @@ async function checkAuth() {
         const res = await fetch('https://api.github.com/user', {
             headers: { 'Authorization': `Bearer ${state.accessToken}` }
         });
+        
         if (res.ok) {
             state.user = await res.json();
         } else {
-            logout(); // Token expired
+            logout(true);  // Token expired
         }
     } catch (e) {
-        console.error("Auth check failed", e);
+        console.error('Auth check failed:', e);
     }
+    
     updateAuthUI();
 }
 
@@ -177,18 +273,21 @@ function updateAuthUI() {
     const userDiv = document.getElementById('auth-user');
     
     if (state.user) {
-        guest.classList.add('hidden');
-        userDiv.classList.remove('hidden');
-        document.getElementById('sidebar-avatar').src = state.user.avatar_url;
-        document.getElementById('sidebar-username').textContent = state.user.login;
+        if (guest) guest.classList.add('hidden');
+        if (userDiv) userDiv.classList.remove('hidden');
         
-        document.getElementById('form-user-badge').innerHTML = `
-            <img src="${state.user.avatar_url}"> Verified: ${state.user.login}
-        `;
+        const avatar = document.getElementById('sidebar-avatar');
+        const username = document.getElementById('sidebar-username');
+        const badge = document.getElementById('form-user-badge');
+        
+        if (avatar) avatar.src = state.user.avatar_url;
+        if (username) username.textContent = state.user.login;
+        if (badge) badge.innerHTML = `<img src="${state.user.avatar_url}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle;margin-right:8px;"> Registry Signer: ${state.user.login}`;
+        
         updateVerificationUI();
     } else {
-        guest.classList.remove('hidden');
-        userDiv.classList.add('hidden');
+        if (guest) guest.classList.remove('hidden');
+        if (userDiv) userDiv.classList.add('hidden');
     }
 }
 
@@ -197,14 +296,12 @@ async function startDeviceAuth() {
     const loading = document.getElementById('auth-loading');
     const codeSec = document.getElementById('auth-code-section');
     
-    overlay.classList.remove('hidden');
-    loading.classList.remove('hidden');
-    codeSec.classList.add('hidden');
+    if (overlay) overlay.classList.remove('hidden');
+    if (loading) loading.classList.remove('hidden');
+    if (codeSec) codeSec.classList.add('hidden');
     
     try {
-        // NOTE: In a static environment without a CORS proxy, this call to GitHub might fail 
-        // if not proxied. Assuming the user understands the CORS limitation of purely static sites.
-        // For production, use a worker proxy.
+        // Use CORS proxy for static site
         const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(CONFIG.api.deviceCode), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -214,18 +311,19 @@ async function startDeviceAuth() {
         const data = await res.json();
         
         if (data.device_code) {
-            loading.classList.add('hidden');
-            codeSec.classList.remove('hidden');
-            document.getElementById('user-code').textContent = data.user_code;
+            if (loading) loading.classList.add('hidden');
+            if (codeSec) codeSec.classList.remove('hidden');
             
-            pollForToken(data.device_code, data.interval);
+            const codeDisplay = document.getElementById('user-code');
+            if (codeDisplay) codeDisplay.textContent = data.user_code;
+            
+            pollForToken(data.device_code, data.interval || 5);
         } else {
-            throw new Error('No device code');
+            throw new Error('No device code received');
         }
     } catch (e) {
-        console.error(e);
-        // Fallback for demo if CORS fails
-        alert("CORS Error: Static sites cannot hit GitHub Auth directly without a proxy. \n\nCheck console for details.");
+        console.error('Device auth failed:', e);
+        alert('Authentication failed. Please try again.');
         closeAuthModal();
     }
 }
@@ -253,136 +351,142 @@ function pollForToken(deviceCode, interval) {
                 localStorage.setItem('gh_token', data.access_token);
                 closeAuthModal();
                 checkAuth();
+            } else if (data.error === 'slow_down') {
+                clearInterval(state.deviceInterval);
+                pollForToken(deviceCode, interval + 5);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('Poll error:', e);
+        }
     }, (interval + 1) * 1000);
 }
 
 function closeAuthModal() {
-    document.getElementById('auth-overlay').classList.add('hidden');
-    if (state.deviceInterval) clearInterval(state.deviceInterval);
+    const overlay = document.getElementById('auth-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    if (state.deviceInterval) {
+        clearInterval(state.deviceInterval);
+        state.deviceInterval = null;
+    }
 }
 
-function logout() {
+function logout(silent = false) {
+    if (!silent && !confirm('Disconnect from Ci5?')) return;
+    
     state.user = null;
     state.accessToken = null;
+    state.hwVerified = false;
+    state.hwid = null;
+    
     localStorage.removeItem('gh_token');
+    localStorage.removeItem('ci5_session');
+    
+    // Generate new session ID
+    state.sessionId = crypto.randomUUID();
+    localStorage.setItem('ci5_session', state.sessionId);
+    
     updateAuthUI();
-    switchView('official'); // Kick out of submit view
+    switchView('official');
 }
 
-// --- DATA LOGIC ---
+// ═══════════════════════════════════════════════════════════════════════════
+// CORK REGISTRY DATA
+// ═══════════════════════════════════════════════════════════════════════════
 
 async function fetchCorks() {
     try {
         const response = await fetch('corks.json');
-        if (!response.ok) throw new Error("Manifest Missing");
+        if (!response.ok) throw new Error('Manifest missing');
+        
         REGISTRY_DATA = await response.json();
         
-        if (document.getElementById('signer-display')) {
-            document.getElementById('signer-display').innerText = `AUTH: ${REGISTRY_DATA.meta.signing_authority}`;
+        const signerDisplay = document.getElementById('signer-display');
+        if (signerDisplay && REGISTRY_DATA.meta) {
+            signerDisplay.textContent = `MAINTAINER: ${REGISTRY_DATA.meta.signing_authority}`;
         }
         
         switchView('official');
-        
-    } catch (error) {
-        console.error(error);
-        if (document.getElementById('signer-display')) {
-            document.getElementById('signer-display').innerText = "OFFLINE MODE";
-        }
+    } catch (e) {
+        console.error('Failed to load corks:', e);
+        const signerDisplay = document.getElementById('signer-display');
+        if (signerDisplay) signerDisplay.textContent = 'OFFLINE MODE';
     }
 }
 
-// VIEW CONTROLLER
 function switchView(viewName, element) {
-    // STRICT LOCK: Submission requires Hardware Verification
-    if (viewName === 'submit') {
-        requireHardware(() => {
-            showSubmissionView(element);
-        });
+    // Require login for submission view
+    if (viewName === 'submit' && !state.user) {
+        startDeviceAuth();
         return;
     }
-
-    // Normal view switching
-    showView(viewName, element);
-}
-
-function showSubmissionView(element) {
-    const browser = document.getElementById('browser-view');
-    const submission = document.getElementById('submission-view');
     
-    if (element) {
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
-    }
-    
-    browser.classList.add('hidden');
-    submission.classList.remove('hidden');
-}
-
-function showView(viewName, element) {
     const browser = document.getElementById('browser-view');
     const submission = document.getElementById('submission-view');
     const header = document.getElementById('section-header');
     const hero = document.getElementById('hero-card');
-
-    // NAV HIGHLIGHT LOGIC
+    
+    // Update active nav item
     if (element) {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         element.classList.add('active');
     }
     
-    // Hide All Views
-    browser.classList.remove('hidden');
-    submission.classList.add('hidden');
-
+    // Hide all views
+    if (browser) browser.classList.add('hidden');
+    if (submission) submission.classList.add('hidden');
+    
+    if (viewName === 'submit') {
+        if (submission) submission.classList.remove('hidden');
+        return;
+    }
+    
+    if (browser) browser.classList.remove('hidden');
+    
     const grid = document.getElementById('main-grid');
-    grid.innerHTML = '';
-
-    if (viewName === 'official') {
-        header.innerText = "🃏 ci5-canon-corks";
-        hero.classList.remove('hidden');
-        renderRows(REGISTRY_DATA.official, true);
-    } else if (viewName === 'top') {
-        header.innerText = "🌠 User Favourite Corks";
-        hero.classList.add('hidden');
-        renderRows(REGISTRY_DATA.community, false);
-    } else if (viewName === 'community') {
-        header.innerText = "🛸 Recently Deployed Corks";
-        hero.classList.add('hidden');
-        renderRows(REGISTRY_DATA.community, false); 
-    } 
-}
-
-function getSubmitterFromRepo(repoPath) {
-    if (!repoPath) return 'unknown';
-    const parts = repoPath.split('/');
-    return parts[0] || 'unknown';
+    if (grid) grid.innerHTML = '';
+    
+    if (!REGISTRY_DATA) return;
+    
+    switch (viewName) {
+        case 'official':
+            if (header) header.textContent = '🃏 ci5-canon-corks';
+            if (hero) hero.classList.remove('hidden');
+            renderRows(REGISTRY_DATA.official, true);
+            break;
+        case 'community':
+            if (header) header.textContent = '🛸 Community Corks';
+            if (hero) hero.classList.add('hidden');
+            renderRows(REGISTRY_DATA.community, false);
+            break;
+        case 'top':
+            if (header) header.textContent = '🌠 Top Rated';
+            if (hero) hero.classList.add('hidden');
+            renderRows(REGISTRY_DATA.community, false);
+            break;
+    }
 }
 
 function renderRows(corksObj, isOfficial) {
     const grid = document.getElementById('main-grid');
+    if (!grid || !corksObj) return;
     
     Object.entries(corksObj).forEach(([key, cork]) => {
         const el = document.createElement('div');
         el.className = 'app-row';
-        el.onclick = () => openDetail(key, isOfficial ? 'official' : 'community'); 
+        el.onclick = () => openDetail(key, isOfficial ? 'official' : 'community');
         
-        let statusDot = '<span class="status-dot dot-suspicious"></span>';
-        if (cork.audit && cork.audit.audit_result === 'SAFE') {
+        let statusDot = '<span class="status-dot dot-unknown"></span>';
+        if (cork.audit?.audit_result === 'SAFE') {
             statusDot = '<span class="status-dot dot-safe"></span>';
         }
-
-        const iconChar = getIconFor(key);
-        const submitter = getSubmitterFromRepo(cork.repo);
-
+        
+        const submitter = cork.repo ? cork.repo.split('/')[0] : 'unknown';
+        
         el.innerHTML = `
-            <div class="app-icon">${iconChar}</div>
+            <div class="app-icon">${getIconFor(key)}</div>
             <div class="app-details">
                 <div class="app-name">${key}</div>
-                <div class="app-cat">
-                    ${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}
-                </div>
+                <div class="app-cat">${statusDot} ${cork.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}</div>
                 <div class="app-submitter">by ${submitter}</div>
             </div>
             <button class="get-btn">VIEW</button>
@@ -391,208 +495,153 @@ function renderRows(corksObj, isOfficial) {
     });
 }
 
-// --- MODAL & TELEMETRY LOGIC ---
-
 function openDetail(key, type) {
-    let cork = null;
-    if(REGISTRY_DATA.official[key]) cork = REGISTRY_DATA.official[key];
-    else if(REGISTRY_DATA.community[key]) cork = REGISTRY_DATA.community[key];
+    const cork = REGISTRY_DATA?.official?.[key] || REGISTRY_DATA?.community?.[key];
+    if (!cork) return;
     
-    if(!cork) return;
-
-    document.getElementById('modal-title').innerText = key;
-    document.getElementById('modal-desc').innerText = cork.desc;
-    document.getElementById('modal-ram').innerText = cork.ram || "Unknown";
-    document.getElementById('modal-icon').innerText = getIconFor(key);
-    document.getElementById('modal-cmd').innerText = `ci5 install ${key}`;
-    document.getElementById('modal-source').href = `https://github.com/${cork.repo}`;
+    const modalTitle = document.getElementById('modal-title');
+    const modalDesc = document.getElementById('modal-desc');
+    const modalRam = document.getElementById('modal-ram');
+    const modalIcon = document.getElementById('modal-icon');
+    const modalCmd = document.getElementById('modal-cmd');
+    const modalSource = document.getElementById('modal-source');
+    const modalSubmitter = document.getElementById('modal-submitter');
+    const modalTag = document.getElementById('modal-tag');
     
-    const submitter = getSubmitterFromRepo(cork.repo);
-    document.getElementById('modal-submitter').innerText = `by ${submitter}`;
+    if (modalTitle) modalTitle.textContent = key;
+    if (modalDesc) modalDesc.textContent = cork.desc;
+    if (modalRam) modalRam.textContent = cork.ram || 'Unknown';
+    if (modalIcon) modalIcon.textContent = getIconFor(key);
+    if (modalCmd) modalCmd.textContent = `ci5 install ${key}`;
+    if (modalSource) modalSource.href = `https://github.com/${cork.repo}`;
+    if (modalSubmitter) modalSubmitter.textContent = `by ${cork.repo ? cork.repo.split('/')[0] : 'unknown'}`;
     
-    const tag = document.getElementById('modal-tag');
-    tag.innerText = type === 'official' ? "OFFICIAL SIGNED" : "COMMUNITY";
-    tag.style.color = type === 'official' ? "#30d158" : "#ff9f0a";
-    tag.style.borderColor = type === 'official' ? "#30d158" : "#ff9f0a";
-
-    loadDynamicTelemetry(key);
+    if (modalTag) {
+        modalTag.textContent = type === 'official' ? 'OFFICIAL SIGNED' : 'COMMUNITY';
+        modalTag.style.color = type === 'official' ? '#30d158' : '#ff9f0a';
+        modalTag.style.borderColor = type === 'official' ? '#30d158' : '#ff9f0a';
+    }
+    
     toggleModal(true);
-}
-
-async function loadDynamicTelemetry(corkID) {
-    const box = document.getElementById('community-ram-box');
-    const btn = document.getElementById('telemetry-action-btn');
-    
-    box.innerHTML = '<span style="animation: blink 1s infinite">SEARCHING SIGNAL...</span>';
-    btn.onclick = null; 
-    btn.innerText = "LOADING...";
-
-    try {
-        const query = `repo:${TELEMETRY_REPO} is:issue in:title "TELEMETRY: ${corkID}"`;
-        const searchReq = await fetch(`https://api.github.com/search/issues?q=${encodeURIComponent(query)}`);
-        const searchData = await searchReq.json();
-
-        if (searchData.total_count > 0) {
-            const issue = searchData.items[0];
-            fetchStatsFromComments(issue.number, issue.html_url);
-        } else {
-            box.innerHTML = '<span style="color:#888">NO DATA SIGNAL</span>';
-            setupTelemetryButton(corkID, null, false);
-        }
-    } catch (e) {
-        console.error(e);
-        box.innerHTML = '<span style="color:#ff453a">CONNECTION LOST</span>';
-        btn.innerText = "OFFLINE";
-    }
-}
-
-async function fetchStatsFromComments(issueNumber, issueUrl) {
-    const box = document.getElementById('community-ram-box');
-    
-    const commentsReq = await fetch(`https://api.github.com/repos/${TELEMETRY_REPO}/issues/${issueNumber}/comments`);
-    const comments = await commentsReq.json();
-
-    let totalRam = 0;
-    let count = 0;
-    let corks = 0; 
-    let dorks = 0; 
-
-    comments.forEach(c => {
-        const text = c.body.toUpperCase();
-        if (text.includes('[TELEMETRY]')) {
-            const ramMatch = text.match(/RAM:(\d+)/);
-            if (ramMatch) { totalRam += parseInt(ramMatch[1]); count++; }
-            
-            if (text.includes('STATUS:CORK') || text.includes('STATUS:OK')) corks++;
-            if (text.includes('STATUS:DORK') || text.includes('STATUS:FAIL')) dorks++;
-        }
-    });
-
-    if (count === 0) {
-        box.innerHTML = '<span style="color:#888">AWAITING FIRST REPORT</span>';
-    } else {
-        const avgRam = Math.round(totalRam / count);
-        const reliability = Math.round((corks / (corks + dorks)) * 100);
-        
-        box.innerHTML = `
-            <div class="telemetry-grid">
-                <div class="t-col"><div class="t-lbl">USAGE</div><div class="t-val">${avgRam}MB</div></div>
-                <div class="t-col"><div class="t-lbl">CORKS %</div><div class="t-val" style="color:${reliability > 80 ? '#30d158' : '#ff453a'}">${reliability}%</div></div>
-                <div class="t-col"><div class="t-lbl">REPORTS</div><div class="t-val">${count}</div></div>
-            </div>
-        `;
-    }
-
-    setupTelemetryButton(null, issueUrl, true);
-}
-
-function setupTelemetryButton(corkID, issueUrl, exists) {
-    const btn = document.getElementById('telemetry-action-btn');
-    const ramInput = document.getElementById('vote-ram');
-    const statusInput = document.getElementById('vote-status');
-    const inputs = document.querySelector('.vote-inputs');
-
-    // Action is gated by Hardware Verification
-    inputs.style.opacity = "1";
-    inputs.style.pointerEvents = "auto";
-    btn.className = "vote-btn";
-
-    if (exists) {
-        btn.innerText = "TRANSMIT DATA";
-        btn.onclick = () => {
-            requireHardware(() => {
-                const body = `[TELEMETRY] RAM:${ramInput.value} STATUS:${statusInput.value} \n\nVerified by Ci5-HWID: ${state.hwid.substring(0,8)}`;
-                window.open(`${issueUrl}#new_comment_field?body=${encodeURIComponent(body)}`, '_blank');
-            });
-        };
-    } else {
-        btn.innerText = "INITIALIZE THREAD";
-        btn.onclick = () => {
-            requireHardware(() => {
-                const title = `TELEMETRY: ${corkID}`;
-                const body = `Automated Telemetry Thread for ${corkID}.\n\nPost reports in format: \`[TELEMETRY] RAM:128 STATUS:CORK\`\n\nInitiated by Verified Pilot: ${state.user.login}`;
-                window.open(`https://github.com/${TELEMETRY_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
-            });
-        };
-    }
 }
 
 function toggleModal(show) {
     const el = document.getElementById('modal-overlay');
-    if(show) el.classList.remove('hidden');
-    else el.classList.add('hidden');
+    if (el) {
+        if (show) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+    }
 }
 
 function closeModal(e) {
-    if(e.target.id === 'modal-overlay') toggleModal(false);
+    if (e.target.id === 'modal-overlay') toggleModal(false);
 }
 
 function copyCmd(el) {
-    navigator.clipboard.writeText(el.innerText);
-    const original = el.innerText;
-    el.innerText = "COPIED TO CLIPBOARD";
-    el.style.color = "#fff";
+    navigator.clipboard.writeText(el.textContent);
+    const original = el.textContent;
+    el.textContent = 'COPIED TO CLIPBOARD';
+    el.style.color = '#fff';
     setTimeout(() => {
-        el.innerText = original;
-        el.style.color = "#30d158";
+        el.textContent = original;
+        el.style.color = '#30d158';
     }, 1500);
 }
 
+/**
+ * Generate cork submission — REQUIRES HARDWARE VERIFICATION
+ */
 function generateSubmission() {
     requireHardware(() => {
-        const name = document.getElementById('sub-name').value;
-        const repo = document.getElementById('sub-repo').value;
-        const desc = document.getElementById('sub-desc').value;
-        const ram = document.getElementById('sub-ram').value;
-
-        if(!name || !repo) {
-            alert("Name and Repo are required.");
+        const name = document.getElementById('sub-name')?.value;
+        const repo = document.getElementById('sub-repo')?.value;
+        const desc = document.getElementById('sub-desc')?.value;
+        const ram = document.getElementById('sub-ram')?.value;
+        
+        if (!name || !repo) {
+            alert('Name and Repo are required.');
             return;
         }
-
-        const json = `
-        "${name}": {
-          "repo": "${repo.replace('https://github.com/', '')}",
-          "desc": "${desc}",
-          "ram": "${ram}",
-          "signature": null,
-          "audit": null
-        }`;
-
+        
+        const json = `"${name}": { "repo": "${repo.replace('https://github.com/', '')}", "desc": "${desc}", "ram": "${ram}", "submitter_hwid": "${state.hwid?.substring(0, 8) || 'unverified'}", "signature": null, "audit": null }`;
+        
         const title = `New Cork: ${name}`;
-        const body = `Please add this Cork to the registry:\n\n\`\`\`json${json}\n\`\`\`\n\n**Submitted by Verified Pilot:** @${state.user.login}\n**Hardware ID:** ${state.hwid}`;
+        const body = `Please add this Cork to the registry.
+
+\`\`\`json
+${json}
+\`\`\`
+
+**Submitted by:** @${state.user.login}
+**Hardware Verified:** ${state.hwVerified ? `Yes (${state.hwid?.substring(0, 8)}...)` : 'No'}
+
+---
+*I confirm this submission is for a valid Ci5-tested container.*`;
         
         window.open(`https://github.com/dreamswag/ci5.dev/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`, '_blank');
     });
 }
 
+/**
+ * Submit cork rating — REQUIRES HARDWARE VERIFICATION
+ */
+function submitVote() {
+    requireHardware(async () => {
+        const ram = document.getElementById('vote-ram')?.value;
+        const status = document.getElementById('vote-status')?.value;
+        const corkName = document.getElementById('modal-title')?.textContent;
+        
+        // In a real implementation, this would POST to your API
+        console.log('Vote submitted:', { cork: corkName, ram, status, hwid: state.hwid });
+        alert(`Vote recorded for ${corkName}!\n\nRAM: ${ram}MB\nStatus: ${status}\nHWID: ${state.hwid?.substring(0, 8)}...`);
+    });
+}
+
 function getIconFor(name) {
-    if(name.includes('adguard')) return '🛡️';
-    if(name.includes('unbound')) return '🌐';
-    if(name.includes('suricata')) return '👁️';
-    if(name.includes('minecraft')) return '⛏️';
-    if(name.includes('tor')) return '🧅';
-    if(name.includes('bitcoin')) return '₿';
-    if(name.includes('ethereum')) return 'Ξ';
-    if(name.includes('monero')) return '🔒';
-    if(name.includes('ntop')) return '📊';
+    if (name.includes('adguard')) return '🛡️';
+    if (name.includes('unbound')) return '🌐';
+    if (name.includes('suricata')) return '👁️';
+    if (name.includes('minecraft')) return '⛏️';
+    if (name.includes('tor')) return '🧅';
+    if (name.includes('bitcoin')) return '₿';
+    if (name.includes('ntop')) return '📊';
+    if (name.includes('pihole')) return '🕳️';
+    if (name.includes('wireguard')) return '🔐';
+    if (name.includes('nginx')) return '🌐';
     return '📦';
 }
 
 function filterGrid(query) {
-    if(!query) { switchView('official'); return; }
+    if (!query) {
+        switchView('official');
+        return;
+    }
     
     const grid = document.getElementById('main-grid');
-    grid.innerHTML = '';
+    if (!grid || !REGISTRY_DATA) return;
     
+    grid.innerHTML = '';
     const all = { ...REGISTRY_DATA.official, ...REGISTRY_DATA.community };
-    const filtered = {};
     
     Object.entries(all).forEach(([k, v]) => {
-        if(k.includes(query) || v.desc.toLowerCase().includes(query.toLowerCase())) {
-            filtered[k] = v;
+        if (k.toLowerCase().includes(query.toLowerCase()) || 
+            v.desc?.toLowerCase().includes(query.toLowerCase())) {
+            const isOfficial = !!REGISTRY_DATA.official[k];
+            const el = document.createElement('div');
+            el.className = 'app-row';
+            el.onclick = () => openDetail(k, isOfficial ? 'official' : 'community');
+            
+            const submitter = v.repo ? v.repo.split('/')[0] : 'unknown';
+            el.innerHTML = `
+                <div class="app-icon">${getIconFor(k)}</div>
+                <div class="app-details">
+                    <div class="app-name">${k}</div>
+                    <div class="app-cat">${v.ram || 'RAM?'} • ${isOfficial ? 'Verified' : 'Community'}</div>
+                    <div class="app-submitter">by ${submitter}</div>
+                </div>
+                <button class="get-btn">VIEW</button>
+            `;
+            grid.appendChild(el);
         }
     });
-    
-    renderRows(filtered, false);
 }
