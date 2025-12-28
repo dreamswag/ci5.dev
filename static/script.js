@@ -506,12 +506,12 @@ function switchView(viewName, element) {
             renderRows(REGISTRY_DATA.official, true);
             break;
         case 'community':
-            if (header) header.textContent = '🛸 Community Corks';
+            if (header) header.textContent = '🛸 Recently Deployed Corks';
             if (hero) hero.classList.add('hidden');
             renderRows(REGISTRY_DATA.community, false);
             break;
         case 'top':
-            if (header) header.textContent = '🌠 Top Rated';
+            if (header) header.textContent = '🌠 User Favourite Corks';
             if (hero) hero.classList.add('hidden');
             renderRows(REGISTRY_DATA.community, false);
             break;
