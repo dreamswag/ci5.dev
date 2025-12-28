@@ -76,20 +76,26 @@
             <input type="text" id="search-box" class="search-input" placeholder="🔍 Search Corks...">
             
             <div class="nav-group">
-                <div class="nav-header">⭐ Verified</div>
+                <div class="nav-header">🌠 Verified</div>
                 <div class="nav-item active" onclick="switchView('official', this)">🃏 ci5-canon</div>
             </div>
             
             <div class="nav-group">
-                <div class="nav-header">🧪 Cork Registry</div>
-                <div class="nav-item" onclick="switchView('top', this)">🌠 User Favourites</div>
-                <div class="nav-item" onclick="switchView('community', this)">🛸 Recently Deployed</div>
+                <div class="nav-header">⚗️ Cork Registry</div>
+                <div class="nav-item" onclick="switchView('top', this)">🧪 Curation Rack</div>
+                <div class="nav-item" onclick="switchView('community', this)">🛸 Live Deployment</div>
             </div>
 
             <div class="nav-group">
-                <div class="nav-header">📦 Imported Sources</div>
+                <div class="nav-header">🍾 Cork Cellar</div>
+                <div class="nav-item" onclick="switchView('top', this)">🍷 Grand Reserve</div>
+                <div class="nav-item" onclick="switchView('community', this)">🍇 Nouveau</div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-header">📦 Exotic Crates</div>
                 <div id="tp-sources-list"></div>
-                <div class="nav-item" onclick="openAddSourceModal()">+ Add Source</div>
+                <div class="nav-item" onclick="openAddSourceModal()">📜 Import Customs</div>
             </div>
 
             <div class="nav-group nav-footer">
