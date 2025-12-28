@@ -86,6 +86,12 @@
                 <div class="nav-item" onclick="switchView('community', this)">🛸 Recently Deployed</div>
             </div>
 
+            <div class="nav-group">
+                <div class="nav-header">📦 Imported Sources</div>
+                <div id="tp-sources-list"></div>
+                <div class="nav-item" onclick="openAddSourceModal()">+ Add Source</div>
+            </div>
+
             <div class="nav-group nav-footer">
                 <div class="nav-header">🧬 Ci5-ASH-HELIX</div>
                 
@@ -220,6 +226,35 @@
                 <div class="modal-actions">
                     <a href="#" id="modal-source" target="_blank" class="text-link">View Source Code ↗</a>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-source-modal" class="modal-overlay hidden">
+        <div class="modal-window">
+            <div class="modal-header">
+                <div class="app-icon large">📡</div>
+                <div class="modal-title-group">
+                    <h2>Import Source</h2>
+                    <span class="signer-tag" style="color:#a855f7; border-color:#a855f7;">THIRD PARTY</span>
+                </div>
+                <button class="close-btn" onclick="closeAddSourceModal()">×</button>
+            </div>
+            
+            <div class="modal-body">
+                <p class="desc-text">Import cork lists from external URLs. <br><strong>Warning:</strong> Third-party sources are not verified by Ci5.</p>
+                
+                <div class="form-group">
+                    <label>Source URL (JSON)</label>
+                    <input type="url" id="new-source-url" placeholder="https://example.com/corks.json">
+                </div>
+
+                <div class="form-group">
+                    <label>Source Name (Optional)</label>
+                    <input type="text" id="new-source-name" placeholder="My Custom Corks">
+                </div>
+
+                <button class="hero-btn action-btn" onclick="submitAddSource()">IMPORT SOURCE</button>
             </div>
         </div>
     </div>

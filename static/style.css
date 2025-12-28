@@ -1047,3 +1047,20 @@ code::after {
 ::-webkit-scrollbar-thumb:hover {
     background: #444;
 }
+
+.sidebar-del-btn {
+    opacity: 0;
+    color: #666;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0 4px;
+    transition: 0.2s;
+}
+
+.nav-item:hover .sidebar-del-btn {
+    opacity: 1;
+}
+
+.sidebar-del-btn:hover {
+    color: #ff453a;
+}
