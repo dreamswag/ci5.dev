@@ -8,8 +8,8 @@
  * - GitHub OAuth Device Flow (Styled & Integrated)
  * - Hardware challenge-response verification
  * - Third Party Source Imports
- * - NEW: Cork Cellar (Stacks)
- * - NEW: Mobile Optimized Top Bar
+ * - Cork Cellar (Grand Reserve / Vin de Primeur)
+ * - Mobile Optimized Top Bar
  * * Session Duration: π hours (3.14159... hours ≈ 3h 8m 30s)
  */
 
@@ -68,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // UI Patches & Fixes
     performUiPatches();
-    injectCorkCellarNav();
     setupMobileMenu();
     
     // Data Load
@@ -89,26 +88,19 @@ function performUiPatches() {
     if (menuLeft) {
         const items = Array.from(menuLeft.querySelectorAll('.menu-item'));
         if (items.length >= 3) {
-            // Assuming order: [0]=Run, [1]=Host, [2]=Dev
-            // We want: Dev, Host, Run
-            // Note: items[0] is usually Run based on HTML provided
             const runItem = items[0];
             const devItem = items[2];
             
-            // Swap logic
             if (runItem && devItem) {
-                runItem.parentNode.insertBefore(devItem, runItem); // Move Dev before Run
-                runItem.parentNode.insertBefore(runItem, items[3]); // Move Run to where Dev was (roughly)
-                // Re-ordering specifically: Logo, Dev, Host, Run, Network
-                // Reference: Logo is logic-group, not menu-item
+                runItem.parentNode.insertBefore(devItem, runItem);
+                runItem.parentNode.insertBefore(runItem, items[3]); 
             }
         }
     }
 
-    // 3. Hero Description Newline
+    // 2. Hero Description Newline
     const heroDesc = document.querySelector('.hero-desc');
     if (heroDesc) {
-        // Replace the generic text or format specific part
         const html = heroDesc.innerHTML;
         if (html.includes('Optimised for Pi 5 Leeway')) {
             heroDesc.innerHTML = html.replace('Optimised for Pi 5 Leeway', '<br>Optimised for Pi 5 Leeway');
@@ -117,40 +109,35 @@ function performUiPatches() {
 }
 
 /**
- * 2. Setup Mobile Dropdown Functionality
+ * Setup Mobile Dropdown Functionality
  */
 function setupMobileMenu() {
     const menuItems = document.querySelectorAll('.menu-item');
     
     menuItems.forEach(item => {
-        // Prevent default hover issues on mobile by using click
         item.addEventListener('click', (e) => {
-            // Only trigger on mobile/tablet widths
             if (window.innerWidth < 1024) {
                 const dropdown = item.querySelector('.dropdown');
                 if (dropdown) {
-                    // Close others
                     document.querySelectorAll('.dropdown').forEach(d => {
                         if (d !== dropdown) d.style.display = 'none';
                     });
                     
-                    // Toggle current
                     if (dropdown.style.display === 'flex') {
                         dropdown.style.display = 'none';
                     } else {
                         dropdown.style.display = 'flex';
-                        e.preventDefault(); // Prevent immediate navigation if it's a link
+                        e.preventDefault(); 
                     }
                 }
             }
         });
     });
 
-    // Close menus when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.menu-item')) {
             document.querySelectorAll('.dropdown').forEach(d => {
-                d.style.display = ''; // Reset to CSS default
+                d.style.display = ''; 
             });
         }
     });
@@ -277,7 +264,7 @@ async function fetchCorks() {
         
         REGISTRY_DATA = await response.json();
         
-        // Mock Cellar Data (Since it's not in JSON yet)
+        // Mock Cellar Data
         REGISTRY_DATA.cellar = {
             "privacy-stack": {
                 repo: "stacks/privacy",
@@ -305,8 +292,8 @@ async function fetchCorks() {
             signerDisplay.textContent = `AUTH: ${REGISTRY_DATA.meta.signing_authority}`;
         }
         
-        const active = document.querySelector('.nav-item.active');
-        if (!active) switchView('official');
+        // Force initial render (FIX: removed active check that blocked rendering)
+        switchView('official');
         
     } catch (e) {
         console.error('Failed to load corks:', e);
@@ -353,22 +340,41 @@ function switchView(viewName, element) {
         return;
     }
 
+    const clickedText = element ? element.innerText : '';
+
     switch (viewName) {
         case 'official':
             if (header) header.textContent = '🃏 ci5-canon-corks';
             if (hero) hero.classList.remove('hidden');
             renderRows(REGISTRY_DATA.official, true);
             break;
+
         case 'community':
-            if (header) header.textContent = '🛸 Recently Deployed Corks';
             if (hero) hero.classList.add('hidden');
+            
+            // Dynamic Header based on Nav Selection
+            if (clickedText.includes('Vin')) {
+                if (header) header.textContent = '🍇 Vin de Primeur';
+            } else {
+                if (header) header.textContent = '🛸 Live Deployment';
+            }
+            
             renderRows(REGISTRY_DATA.community, false);
             break;
+
         case 'top':
-            if (header) header.textContent = '⚗️ User Favourite Corks';
             if (hero) hero.classList.add('hidden');
-            renderRows(REGISTRY_DATA.community, false);
+            
+            // Dynamic Header based on Nav Selection
+            if (clickedText.includes('Reserve')) {
+                if (header) header.textContent = '🍷 Grand Reserve';
+            } else {
+                if (header) header.textContent = '🧪 Curation Rack';
+            }
+            
+            renderRows(REGISTRY_DATA.community, false); // Using community data for both for now
             break;
+
         case 'cellar':
             if (header) header.textContent = '🍷 Cork Cellar (Stacks)';
             if (hero) hero.classList.add('hidden');
@@ -395,7 +401,6 @@ function renderRows(corksObj, isOfficial, isThirdParty = false) {
         
         el.onclick = () => openDetail(key, type, cork); 
         
-        // 5. Fix for Green Lights (Status Dots)
         let statusDot = '<span class="status-dot dot-unknown"></span>';
         let subText = isOfficial ? 'Signed' : 'Community';
         
@@ -409,7 +414,6 @@ function renderRows(corksObj, isOfficial, isThirdParty = false) {
         } else if (cork.audit?.audit_result === 'MALICIOUS') {
             statusDot = '<span class="status-dot" style="background:#ff453a"></span>'; // Red
         } else if (!isOfficial && !isThirdParty) {
-            // FIX: Default Community apps to Green if no explicit audit is present (User Request)
             statusDot = '<span class="status-dot dot-safe"></span>';
         }
         
@@ -483,7 +487,7 @@ function openDetail(key, type, corkObj = null) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AUTHENTICATION & LOGIN UI (4. Visual Overhaul)
+// AUTHENTICATION & LOGIN UI
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function checkAuth() {
@@ -544,10 +548,8 @@ async function startDeviceAuth() {
             if (loading) loading.classList.add('hidden');
             if (codeSec) codeSec.classList.remove('hidden');
             
-            // 4. Enhanced Visuals for Login Code (Matches .network style)
             const codeDisplay = document.getElementById('user-code');
             if (codeDisplay) {
-                // Clear default text and use HTML injection for the styled box
                 const container = codeSec;
                 container.innerHTML = `
                     <p class="desc-text" style="text-align:center; margin-bottom: 20px;">
