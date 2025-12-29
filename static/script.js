@@ -62,12 +62,13 @@ localStorage.setItem('ci5_session', state.sessionId);
 document.addEventListener('DOMContentLoaded', () => {
     // Core Init
     injectHardwareModal();
+    
+    // UI Patches & Fixes (Inject CSS for Avatar Fix)
+    performUiPatches();
+    
     checkAuth(); // Checks login state and toggles Connect/Submit UI
     checkHardwareVerification();
     renderThirdPartySidebar(); // Load persistent imports immediately
-    
-    // UI Patches & Fixes
-    performUiPatches();
     setupMobileMenu();
     
     // Data Load
@@ -80,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Applies DOM manipulations to fix layout issues without editing HTML directly
+ * Applies DOM manipulations and CSS injections to fix layout issues
  */
 function performUiPatches() {
     // 1. Remove 'Dev' menu item
@@ -96,8 +97,6 @@ function performUiPatches() {
     if (logoGroup) {
         const logoBold = logoGroup.querySelector('.bold');
         if (logoBold) logoBold.textContent = 'Ci5.dev';
-        
-        // Specific 10px spacing
         logoGroup.style.marginRight = '10px';
     }
 
@@ -110,25 +109,20 @@ function performUiPatches() {
         const footer = document.querySelector('.nav-footer');
         
         if (exoticGroup && footer) {
-            // Push Exotic Crates to the bottom
             exoticGroup.style.marginTop = 'auto';
-            // Space between crates list and the divider line
             exoticGroup.style.marginBottom = '12px'; 
             
-            // Footer Fixes
             footer.style.marginTop = '0';
-            // Reduce padding inside the footer (space between line and content)
             footer.style.paddingTop = '12px'; 
             
-            // Target the specific Helix header inside the footer to remove its default top margin
             const helixHeader = footer.querySelector('.nav-header');
             if (helixHeader) {
-                helixHeader.style.marginTop = '0'; // Removes the large gap
+                helixHeader.style.marginTop = '0';
             }
         }
     }
 
-    // 4. Hero Description Newline (Existing fix)
+    // 4. Hero Description Newline
     const heroDesc = document.querySelector('.hero-desc');
     if (heroDesc) {
         const html = heroDesc.innerHTML;
@@ -136,6 +130,40 @@ function performUiPatches() {
             heroDesc.innerHTML = html.replace('Optimised for Pi 5 Leeway', '<br>Optimised for Pi 5 Leeway');
         }
     }
+
+    // 5. INJECT CSS FIX FOR AVATAR (Fixes "Massive Image" Bug)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        #sidebar-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            object-fit: cover;
+            border: 1px solid #333;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start !important; 
+        }
+        #sidebar-username {
+            font-size: 13px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        .logout-icon {
+            margin-left: auto;
+            color: #666;
+            font-size: 12px;
+            padding: 4px;
+        }
+        .logout-icon:hover { color: #ff453a; }
+    `;
+    document.head.appendChild(style);
 }
 
 /**
@@ -187,10 +215,6 @@ function closeAddSourceModal() {
     document.getElementById('add-source-modal').classList.add('hidden');
 }
 
-/**
- * Validates and persists a new source URL to LocalStorage.
- * Handles validation and auto-naming.
- */
 async function submitAddSource() {
     const urlInput = document.getElementById('new-source-url');
     const nameInput = document.getElementById('new-source-name');
@@ -201,13 +225,11 @@ async function submitAddSource() {
     
     if (!url) return alert('Source URL is required');
 
-    // UI Feedback
     const originalText = btn.textContent;
     btn.textContent = 'VERIFYING MANIFEST...';
     btn.disabled = true;
     
     try {
-        // 1. Validation Fetch
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to reach source`);
         
@@ -218,10 +240,8 @@ async function submitAddSource() {
             throw new Error('Invalid JSON content');
         }
         
-        // 2. Schema Validation
         if (!json.corks && !Array.isArray(json)) throw new Error('Invalid manifest format (missing "corks" array)');
         
-        // 3. Persistence
         const sourceId = 'tp_' + Date.now().toString(36);
         const sourceName = name || json.name || 'Imported Crate';
         
@@ -233,18 +253,15 @@ async function submitAddSource() {
             added_at: Date.now()
         });
         
-        // Save to browser storage
         localStorage.setItem('ci5_sources', JSON.stringify(TP_STATE.sources));
         
-        // 4. Reset & Reload
         urlInput.value = '';
         nameInput.value = '';
         closeAddSourceModal();
         
         renderThirdPartySidebar();
-        await fetchCorks(); // Re-fetch to include new data
+        await fetchCorks(); 
         
-        // Auto-switch to new view
         const newNavItem = Array.from(document.querySelectorAll('#tp-sources-list .nav-item')).pop();
         if (newNavItem) switchView(sourceId, newNavItem);
         
@@ -288,7 +305,6 @@ function renderThirdPartySidebar() {
              if (e.target.className !== 'sidebar-del-btn') switchView(src.id, el);
         };
         
-        // Purple indicator for exotic crates
         el.innerHTML = `
             <span><span style="color:#a855f7; margin-right:6px;">📦</span>${src.name}</span>
             <span class="sidebar-del-btn" onclick="removeSource('${src.id}', event)">×</span>
@@ -297,13 +313,8 @@ function renderThirdPartySidebar() {
     });
 }
 
-/**
- * Fetches data from all persisted sources.
- * uses allSettled to ensure one bad source doesn't break the app.
- */
 async function fetchThirdPartyData() {
     TP_STATE.data = {};
-    
     const promises = TP_STATE.sources.map(async (src) => {
         try {
             const res = await fetch(src.url);
@@ -312,7 +323,6 @@ async function fetchThirdPartyData() {
             const corksList = Array.isArray(json) ? json : json.corks;
             
             const normalized = {};
-            // Normalize data structure to match official registry
             (corksList || []).forEach(c => {
                 const id = c.id || c.name;
                 if (!id) return;
@@ -329,10 +339,9 @@ async function fetchThirdPartyData() {
             TP_STATE.data[src.id] = normalized;
         } catch (e) {
             console.warn(`[Exotic Crate] Failed to load ${src.name}:`, e);
-            TP_STATE.data[src.id] = {}; // Empty set on error
+            TP_STATE.data[src.id] = {}; 
         }
     });
-    
     await Promise.allSettled(promises);
 }
 
@@ -347,7 +356,6 @@ async function fetchCorks() {
         
         REGISTRY_DATA = await response.json();
         
-        // Mock Cellar Data
         REGISTRY_DATA.cellar = {
             "privacy-stack": {
                 repo: "stacks/privacy",
@@ -363,21 +371,19 @@ async function fetchCorks() {
             }
         };
         
-        // Load Exotic Crates
         await fetchThirdPartyData();
         
-        // Merge for Search
         REGISTRY_DATA.third_party_merged = {};
         Object.values(TP_STATE.data).forEach(sourceData => {
             Object.assign(REGISTRY_DATA.third_party_merged, sourceData);
         });
 
+        // FIX: Change label to avoid confusion with user login status
         const signerDisplay = document.getElementById('signer-display');
         if (signerDisplay && REGISTRY_DATA.meta) {
-            signerDisplay.textContent = `AUTH: ${REGISTRY_DATA.meta.signing_authority}`;
+            signerDisplay.textContent = `VERIFIED BY: ${REGISTRY_DATA.meta.signing_authority}`;
         }
         
-        // Initial Render
         const active = document.querySelector('.nav-item.active');
         if (!active || active.textContent.includes('canon')) switchView('official');
         
@@ -418,15 +424,12 @@ function switchView(viewName, element) {
     
     if (!REGISTRY_DATA) return;
     
-    // EXOTIC CRATES VIEW
     if (viewName.startsWith('tp_')) {
         const src = TP_STATE.sources.find(s => s.id === viewName);
         if (header) {
             header.innerHTML = `<span style="color:#a855f7">📦</span> ${src ? src.name : 'Unknown Crate'}`;
         }
         if (hero) hero.classList.add('hidden');
-        
-        // Render with specific third-party flag
         renderRows(TP_STATE.data[viewName] || {}, false, true);
         return;
     }
@@ -490,14 +493,14 @@ function renderRows(corksObj, isOfficial, isThirdParty = false) {
         let subText = isOfficial ? 'Signed' : 'Community';
         
         if (isThirdParty) {
-            statusDot = '<span class="status-dot" style="background:#a855f7"></span>'; // Purple for Exotic
+            statusDot = '<span class="status-dot" style="background:#a855f7"></span>'; 
             subText = `<span style="color:#a855f7">Imported</span>`;
         } else if (cork.audit?.audit_result === 'SAFE') {
             statusDot = '<span class="status-dot dot-safe"></span>';
         } else if (cork.audit?.audit_result === 'SUSPICIOUS') {
-            statusDot = '<span class="status-dot" style="background:#ff9f0a"></span>'; // Orange
+            statusDot = '<span class="status-dot" style="background:#ff9f0a"></span>'; 
         } else if (cork.audit?.audit_result === 'MALICIOUS') {
-            statusDot = '<span class="status-dot" style="background:#ff453a"></span>'; // Red
+            statusDot = '<span class="status-dot" style="background:#ff453a"></span>'; 
         } else if (!isOfficial && !isThirdParty) {
             statusDot = '<span class="status-dot dot-safe"></span>';
         }
