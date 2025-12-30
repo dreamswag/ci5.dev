@@ -84,22 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
  * Applies DOM manipulations and CSS injections to fix layout issues
  */
 function performUiPatches() {
-    // 1. Remove 'Dev' menu item
-    const menuItems = document.querySelectorAll('.menu-item');
-    menuItems.forEach(item => {
-        if (item.querySelector('.menu-label')?.textContent.toLowerCase() === 'dev') {
-            item.remove();
-        }
-    });
 
-    // 2. Header Updates: Rename Logo & Fix Spacing
-    const logoGroup = document.querySelector('.logo-group');
-    if (logoGroup) {
-        const logoBold = logoGroup.querySelector('.bold');
-        if (logoBold) logoBold.textContent = 'Ci5.dev';
-        logoGroup.style.marginRight = '10px';
+    const logo = document.querySelector('.logo-group');
+    if (logo) {
+        logo.style.marginRight = '7.41px'; 
     }
-
     // 3. Move Exotic Crates & Tighten Footer Spacing
     const headers = Array.from(document.querySelectorAll('.nav-header'));
     const exoticHeader = headers.find(h => h.textContent.includes('Exotic Crates'));
